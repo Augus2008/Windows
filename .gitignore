@@ -1,0 +1,17 @@
+# 编译输出
+bin/
+obj/
+publish/
+
+# 发布包
+*.zip
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+
+# 临时文件
+*.tmp
+*.log
