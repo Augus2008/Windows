@@ -1,17 +1,11 @@
-# 编译输出
-bin/
-obj/
-publish/
-
-# 发布包
+# 全局忽略
+**/bin/
+**/obj/
+**/publish/
 *.zip
-
-# IDE
 .vs/
 .idea/
 *.user
 *.suo
-
-# 临时文件
 *.tmp
 *.log
