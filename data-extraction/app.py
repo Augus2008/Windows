@@ -27,24 +27,20 @@ class App(ctk.CTk):
     def _ui(self):
         self.grid_columnconfigure(1, weight=1); self.grid_rowconfigure(1, weight=1)
         side = ctk.CTkFrame(self, width=285, corner_radius=0, fg_color="#102a43"); side.grid(row=0,column=0,rowspan=2,sticky="nsew"); side.grid_propagate(False)
-        ctk.CTkLabel(side,text="文件与数据操作",font=("Microsoft YaHei UI",15,"bold"),text_color="#d9eaf7").pack(anchor="w",padx=24,pady=(30,14))
         ctk.CTkButton(side,text="＋  导入数据文件",height=44,command=self.import_file,font=("Microsoft YaHei UI",14,"bold")).pack(fill="x",padx=22)
-        self.file = ctk.CTkLabel(side,text="尚未导入文件",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
+        self.file = ctk.CTkLabel(side,text="支持导入：Excel、CSV、TXT、LOG",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
         ctk.CTkLabel(side,text="工作表",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
         self.sheet = ctk.CTkComboBox(side,values=["请先导入文件"],state="disabled",command=self.change_sheet,height=36); self.sheet.pack(fill="x",padx=22,pady=(7,22))
         ctk.CTkLabel(side,text="导出格式",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
         self.fmt=ctk.CTkSegmentedButton(side,values=["Excel","CSV","TXT"]); self.fmt.set("Excel"); self.fmt.pack(fill="x",padx=22,pady=(8,10))
         ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",command=self.export).pack(fill="x",padx=22)
-        info=ctk.CTkFrame(side,fg_color="#173d5c",corner_radius=10);info.pack(fill="x",padx=20,pady=(18,0))
-        ctk.CTkLabel(info,text="支持格式",font=("Microsoft YaHei UI",13,"bold"),text_color="#ffffff").pack(anchor="w",padx=14,pady=(13,5))
-        ctk.CTkLabel(info,text="输入：Excel、CSV、TXT、LOG\n输出：Excel、CSV、TXT\n\n支持多条件筛选、列选择、去重，\nLOG 可解析时间、级别与异常内容。",justify="left",wraplength=225,text_color="#b9d6eb",font=("Microsoft YaHei UI",11)).pack(anchor="w",padx=14,pady=(0,14))
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件后即可开始提取",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
         self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT 与 LOG 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="white",corner_radius=12); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
         ctk.CTkLabel(box,text="筛选条件",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,padx=18,pady=(14,6),sticky="w")
-        self.logic=ctk.CTkSegmentedButton(box,values=["满足全部条件 (AND)","满足任一条件 (OR)"],width=320); self.logic.set("满足全部条件 (AND)"); self.logic.grid(row=0,column=1,padx=18,pady=(14,6),sticky="e")
+        self.logic=ctk.CTkSegmentedButton(box,values=["全部条件 AND","任一条件 OR"],width=300,selected_color="#2563eb",selected_hover_color="#1d4ed8",unselected_color="#dbeafe",unselected_hover_color="#bfdbfe",text_color="#0f172a"); self.logic.set("全部条件 AND"); self.logic.grid(row=0,column=1,padx=18,pady=(14,6),sticky="e")
         self.condbox=ctk.CTkFrame(box,fg_color="transparent"); self.condbox.grid(row=1,column=0,columnspan=2,padx=14,sticky="ew")
         ctk.CTkButton(box,text="＋ 添加条件",width=110,height=32,command=self.add_condition).grid(row=2,column=0,padx=18,pady=(8,14),sticky="w")
         ctk.CTkButton(box,text="清空筛选",width=100,height=32,fg_color="#90a4ae",command=self.clear_conditions).grid(row=2,column=1,padx=18,pady=(8,14),sticky="e")
@@ -58,9 +54,10 @@ class App(ctk.CTk):
         top=ctk.CTkFrame(table,fg_color="transparent"); top.grid(row=0,column=0,padx=16,pady=(13,7),sticky="ew"); top.grid_columnconfigure(1,weight=1)
         ctk.CTkLabel(top,text="结果预览",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,sticky="w")
         self.rows=ctk.CTkLabel(top,text="0 行",text_color="#607d8b"); self.rows.grid(row=0,column=1,padx=12,sticky="w")
-        ctk.CTkButton(top,text="选择显示列",width=104,height=30,fg_color="#0ea5e9",hover_color="#0284c7",command=self.columns).grid(row=0,column=2,sticky="e")
+        self.colmenu=ctk.CTkOptionMenu(top,values=["列操作 ▼","选择显示列…","显示全部列"],width=125,height=32,fg_color="#0284c7",button_color="#0369a1",button_hover_color="#075985",command=self.column_action).grid(row=0,column=2,sticky="e")
+        self.colmenu.set("列操作 ▼")
         wrap=ctk.CTkFrame(table,fg_color="transparent"); wrap.grid(row=1,column=0,padx=15,pady=(0,15),sticky="nsew"); wrap.grid_columnconfigure(0,weight=1); wrap.grid_rowconfigure(0,weight=1)
-        self.tree=ttk.Treeview(wrap,show="headings"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew")
+        self.tree=ttk.Treeview(wrap,show="headings",selectmode="extended"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew"); self.tree.bind("<Control-c>",self.copy_selection); self.tree.bind("<Button-3>",self.popup_copy_menu)
 
     def import_file(self):
         p=filedialog.askopenfilename(title="选择数据文件",filetypes=[("数据文件","*.xlsx *.xls *.csv *.txt *.log"),("所有文件","*.*")])
@@ -76,11 +73,21 @@ class App(ctk.CTk):
             self.file.configure(text=f"已导入\n{self.path.name}")
         except Exception as e: messagebox.showerror("导入失败",f"无法读取该文件：\n{e}")
     def load_text(self,p):
-        err=None
+        lines=None
         for enc in ("utf-8-sig","utf-8","gb18030","gbk","latin1"):
-            try: self.source=pd.read_csv(p,encoding=enc,sep=None,engine="python"); self.loaded(); return
-            except Exception as e:err=e
-        raise err
+            try:
+                with open(p,"r",encoding=enc) as f:lines=f.read().splitlines()
+                break
+            except UnicodeDecodeError:continue
+        if lines is None:raise ValueError("无法识别文件编码")
+        sample="\n".join(lines[:30])
+        try:
+            dialect=csv.Sniffer().sniff(sample,delimiters=",\t;|")
+            self.source=pd.read_csv(p,encoding=enc,sep=dialect.delimiter,engine="python")
+            if len(self.source.columns)==1:raise ValueError()
+        except Exception:
+            self.source=pd.DataFrame({"行号":range(1,len(lines)+1),"文本内容":lines})
+        self.loaded()
     def load_log(self,p):
         text=None
         for enc in ("utf-8-sig","utf-8","gb18030","gbk","latin1"):
@@ -139,7 +146,7 @@ class App(ctk.CTk):
             for _,c,o,v in self.conditions:ms.append(self.test(self.source[c.get()],o.get(),v.get()))
             if ms:
                 m=ms[0]
-                for z in ms[1:]:m=(m&z) if self.logic.get().startswith("满足全部") else (m|z)
+                for z in ms[1:]:m=(m&z) if self.logic.get().startswith("全部") else (m|z)
                 self.result=self.source[m].copy()
             else:self.result=self.source.copy()
             self.refresh()
@@ -160,6 +167,29 @@ class App(ctk.CTk):
         for c in cols:self.tree.heading(c,text=c);self.tree.column(c,width=max(120,min(260,len(c)*16+80)),anchor="w")
         for _,r in d.head(PREVIEW_ROWS).iterrows():self.tree.insert("","end",values=["" if pd.isna(x) else str(x)[:500] for x in r])
         self.rows.configure(text=f"筛选结果：{len(d):,} 行"+("（仅预览前 500 行）" if len(d)>PREVIEW_ROWS else ""))
+    def column_action(self,choice):
+        if choice=="选择显示列…":self.columns()
+        elif choice=="显示全部列" and self.result is not None:self.visible={c:True for c in self.result.columns};self.refresh()
+        self.after(100,lambda:self.colmenu.set("列操作 ▼"))
+    def selected_text(self):
+        items=self.tree.selection()
+        if not items and self.tree.focus():items=(self.tree.focus(),)
+        return "\n".join("\t".join(map(str,self.tree.item(i,"values"))) for i in items)
+    def copy_selection(self,event=None):
+        text=self.selected_text()
+        if text:self.clipboard_clear();self.clipboard_append(text);self.update()
+        return "break"
+    def copy_cell(self):
+        item=getattr(self,"copy_item",None);col=getattr(self,"copy_col","")
+        if not item or not col:return
+        vals=self.tree.item(item,"values");idx=int(col[1:])-1
+        if 0<=idx<len(vals):self.clipboard_clear();self.clipboard_append(str(vals[idx]));self.update()
+    def popup_copy_menu(self,event):
+        item=self.tree.identify_row(event.y);self.copy_col=self.tree.identify_column(event.x);self.copy_item=item
+        if item:
+            if item not in self.tree.selection():self.tree.selection_set(item)
+            self.tree.focus(item)
+        menu=tk.Menu(self,tearoff=0);menu.add_command(label="复制单元格",command=self.copy_cell);menu.add_command(label="复制所选行（Ctrl+C）",command=self.copy_selection);menu.tk_popup(event.x_root,event.y_root)
     def columns(self):
         if self.result is None:return
         w=ctk.CTkToplevel(self);w.title("选择显示与导出列");w.geometry("430x560");w.transient(self);w.grab_set();ctk.CTkLabel(w,text="选择需要保留的列",font=("Microsoft YaHei UI",18,"bold")).pack(pady=(20,10));f=ctk.CTkScrollableFrame(w);f.pack(fill="both",expand=True,padx=20,pady=8);vs={}
