@@ -27,8 +27,7 @@ class App(ctk.CTk):
     def _ui(self):
         self.grid_columnconfigure(1, weight=1); self.grid_rowconfigure(1, weight=1)
         side = ctk.CTkFrame(self, width=285, corner_radius=0, fg_color="#102a43"); side.grid(row=0,column=0,rowspan=2,sticky="nsew"); side.grid_propagate(False)
-        ctk.CTkLabel(side,text="数据提取",font=("Microsoft YaHei UI",27,"bold"),text_color="white").pack(anchor="w",padx=26,pady=(32,2))
-        ctk.CTkLabel(side,text="Excel · CSV · TXT 数据处理工具",font=("Microsoft YaHei UI",12),text_color="#b9d6eb").pack(anchor="w",padx=27,pady=(0,26))
+        ctk.CTkLabel(side,text="文件与数据操作",font=("Microsoft YaHei UI",15,"bold"),text_color="#d9eaf7").pack(anchor="w",padx=24,pady=(30,14))
         ctk.CTkButton(side,text="＋  导入数据文件",height=44,command=self.import_file,font=("Microsoft YaHei UI",14,"bold")).pack(fill="x",padx=22)
         self.file = ctk.CTkLabel(side,text="尚未导入文件",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
         ctk.CTkLabel(side,text="工作表",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
@@ -36,10 +35,12 @@ class App(ctk.CTk):
         ctk.CTkLabel(side,text="导出格式",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
         self.fmt=ctk.CTkSegmentedButton(side,values=["Excel","CSV","TXT"]); self.fmt.set("Excel"); self.fmt.pack(fill="x",padx=22,pady=(8,10))
         ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",command=self.export).pack(fill="x",padx=22)
-        ctk.CTkLabel(side,text="支持多条件筛选、去重与选择列导出。",justify="left",wraplength=235,text_color="#8fb3ca",font=("Microsoft YaHei UI",11)).pack(anchor="w",padx=24,pady=14)
+        info=ctk.CTkFrame(side,fg_color="#173d5c",corner_radius=10);info.pack(fill="x",padx=20,pady=(18,0))
+        ctk.CTkLabel(info,text="支持格式",font=("Microsoft YaHei UI",13,"bold"),text_color="#ffffff").pack(anchor="w",padx=14,pady=(13,5))
+        ctk.CTkLabel(info,text="输入：Excel、CSV、TXT、LOG\n输出：Excel、CSV、TXT\n\n支持多条件筛选、列选择、去重，\nLOG 可解析时间、级别与异常内容。",justify="left",wraplength=225,text_color="#b9d6eb",font=("Microsoft YaHei UI",11)).pack(anchor="w",padx=14,pady=(0,14))
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件后即可开始提取",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
-        self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV 与 TXT 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
+        self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT 与 LOG 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="white",corner_radius=12); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
         ctk.CTkLabel(box,text="筛选条件",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,padx=18,pady=(14,6),sticky="w")
@@ -49,24 +50,27 @@ class App(ctk.CTk):
         ctk.CTkButton(box,text="清空筛选",width=100,height=32,fg_color="#90a4ae",command=self.clear_conditions).grid(row=2,column=1,padx=18,pady=(8,14),sticky="e")
         tools=ctk.CTkFrame(main,fg_color="transparent"); tools.grid(row=1,column=0,padx=24,pady=5,sticky="ew"); tools.grid_columnconfigure(0,weight=1)
         self.quick=tk.StringVar(); e=ctk.CTkEntry(tools,textvariable=self.quick,placeholder_text="快速搜索全部列…",height=35,width=280); e.grid(row=0,column=0,sticky="w"); e.bind("<Return>",lambda _:self.apply())
-        ctk.CTkButton(tools,text="搜索 / 应用筛选",width=120,height=35,command=self.apply).grid(row=0,column=1,padx=8)
-        ctk.CTkButton(tools,text="去除重复行",width=105,height=35,fg_color="#64748b",command=self.dedupe).grid(row=0,column=2,padx=4)
-        ctk.CTkButton(tools,text="恢复原始数据",width=110,height=35,fg_color="#90a4ae",command=self.reset).grid(row=0,column=3)
+        ctk.CTkButton(tools,text="搜索 / 应用筛选",width=120,height=35,fg_color="#2563eb",hover_color="#1d4ed8",command=self.apply).grid(row=0,column=1,padx=8)
+        ctk.CTkButton(tools,text="去除重复行",width=105,height=35,fg_color="#7c3aed",hover_color="#6d28d9",command=self.dedupe).grid(row=0,column=2,padx=4)
+        ctk.CTkButton(tools,text="仅看异常",width=90,height=35,fg_color="#dc2626",hover_color="#b91c1c",command=self.only_errors).grid(row=0,column=3,padx=4)
+        ctk.CTkButton(tools,text="恢复原始数据",width=110,height=35,fg_color="#f59e0b",hover_color="#d97706",text_color="#ffffff",command=self.reset).grid(row=0,column=4)
         table=ctk.CTkFrame(main,fg_color="white",corner_radius=12); table.grid(row=2,column=0,padx=22,pady=(8,20),sticky="nsew"); table.grid_columnconfigure(0,weight=1); table.grid_rowconfigure(1,weight=1)
         top=ctk.CTkFrame(table,fg_color="transparent"); top.grid(row=0,column=0,padx=16,pady=(13,7),sticky="ew"); top.grid_columnconfigure(1,weight=1)
         ctk.CTkLabel(top,text="结果预览",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,sticky="w")
         self.rows=ctk.CTkLabel(top,text="0 行",text_color="#607d8b"); self.rows.grid(row=0,column=1,padx=12,sticky="w")
-        ctk.CTkButton(top,text="选择显示列",width=104,height=30,command=self.columns).grid(row=0,column=2,sticky="e")
+        ctk.CTkButton(top,text="选择显示列",width=104,height=30,fg_color="#0ea5e9",hover_color="#0284c7",command=self.columns).grid(row=0,column=2,sticky="e")
         wrap=ctk.CTkFrame(table,fg_color="transparent"); wrap.grid(row=1,column=0,padx=15,pady=(0,15),sticky="nsew"); wrap.grid_columnconfigure(0,weight=1); wrap.grid_rowconfigure(0,weight=1)
         self.tree=ttk.Treeview(wrap,show="headings"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew")
 
     def import_file(self):
-        p=filedialog.askopenfilename(title="选择数据文件",filetypes=[("数据文件","*.xlsx *.xls *.csv *.txt"),("所有文件","*.*")])
+        p=filedialog.askopenfilename(title="选择数据文件",filetypes=[("数据文件","*.xlsx *.xls *.csv *.txt *.log"),("所有文件","*.*")])
         if not p:return
         self.path=Path(p)
         try:
             if self.path.suffix.lower() in (".xlsx",".xls"):
                 names=pd.ExcelFile(p).sheet_names; self.sheet.configure(values=names,state="normal"); self.sheet.set(names[0]); self.load_sheet(names[0])
+            elif self.path.suffix.lower()==".log":
+                self.sheet.configure(values=["LOG 日志文件"],state="disabled"); self.load_log(p)
             else:
                 self.sheet.configure(values=["CSV / TXT 文件"],state="disabled"); self.load_text(p)
             self.file.configure(text=f"已导入\n{self.path.name}")
@@ -77,6 +81,27 @@ class App(ctk.CTk):
             try: self.source=pd.read_csv(p,encoding=enc,sep=None,engine="python"); self.loaded(); return
             except Exception as e:err=e
         raise err
+    def load_log(self,p):
+        text=None
+        for enc in ("utf-8-sig","utf-8","gb18030","gbk","latin1"):
+            try:
+                with open(p,"r",encoding=enc) as f:text=f.read().splitlines()
+                break
+            except UnicodeDecodeError:continue
+        rows=[]
+        pat=re.compile(r"^\[(?P<datetime>\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})\](?:\[\s*(?P<runtime>\d+\.\d+)\])?\s*(?P<message>.*)$")
+        for no,line in enumerate(text or [],1):
+            m=pat.match(line);dt=m.group("datetime") if m else "";runtime=m.group("runtime") if m else "";msg=m.group("message") if m else line
+            low=msg.lower()
+            if re.search(r"panic|fatal|exception|\berr(?:or)?\b|fail(?:ed)?|not exist|timeout",low):level="ERROR"
+            elif re.search(r"\bwarn(?:ing)?\b",low):level="WARN"
+            elif re.search(r"\[\s*ok\s*\]",low):level="OK"
+            else:level="INFO"
+            module="";mm=re.match(r"([^ ]+\.(?:c|cpp|h):\d+):?",msg)
+            if mm:module=mm.group(1)
+            rows.append({"行号":no,"日期时间":dt.strip(),"运行时间(秒)":runtime,"级别":level,"模块/来源":module,"日志内容":msg,"原始行":line})
+        self.source=pd.DataFrame(rows);self.loaded()
+
     def change_sheet(self,name):
         if self.path and self.path.suffix.lower() in (".xlsx",".xls"):self.load_sheet(name)
     def load_sheet(self,name): self.source=pd.read_excel(self.path,sheet_name=name); self.loaded()
@@ -119,6 +144,10 @@ class App(ctk.CTk):
             else:self.result=self.source.copy()
             self.refresh()
         except Exception as e:messagebox.showerror("筛选失败",str(e))
+    def only_errors(self):
+        if self.source is None:return
+        if "级别" not in self.source.columns:messagebox.showinfo("提示","仅 LOG 日志文件支持一键查看异常。");return
+        self.result=self.source[self.source["级别"].isin(["ERROR","WARN"])].copy();self.refresh()
     def reset(self):
         if self.source is not None:self.result=self.source.copy();self.clear_conditions();self.refresh()
     def dedupe(self):

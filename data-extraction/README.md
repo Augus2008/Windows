@@ -23,3 +23,7 @@ py -m pip install pyinstaller
 py -m PyInstaller --noconfirm --clean --windowed --name "数据提取" app.py
 ```
 产物为 `dist/数据提取/数据提取.exe`。
+
+## LOG 日志支持
+- 导入 `.log` 串口/设备日志并解析为行号、日期时间、运行时间、级别、模块、日志内容和原始行。
+- 自动识别 ERROR / WARN / OK / INFO，支持“一键仅看异常”。
