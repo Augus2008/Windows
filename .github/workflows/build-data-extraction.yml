@@ -19,16 +19,16 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --upgrade pip; python -m pip install -r requirements.txt pyinstaller
       - name: Build EXE
-        run: python -m PyInstaller --noconfirm --clean --windowed --name "DataExtractor" app.py
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "DataExtractor" app.py
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: DataExtractor-Windows
-          path: data-extraction/dist/DataExtractor/DataExtractor.exe
+          path: data-extraction/dist/DataExtractor.exe
           if-no-files-found: error
       - name: Publish Windows EXE to Release
         uses: softprops/action-gh-release@v2
         with:
           name: Data Extractor v0.1.0
           prerelease: true
-          files: data-extraction/dist/DataExtractor/DataExtractor.exe
+          files: data-extraction/dist/DataExtractor.exe
