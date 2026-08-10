@@ -53,3 +53,8 @@ py -m PyInstaller --noconfirm --clean --windowed --name "数据提取" app.py
 - 关于区域显示版本号、编译日期和 Copyright 2026 ehisuy。
 - “工作表”改为“数据源 / 工作表”：Excel 可选择工作表，CSV/TXT/LOG/TRC 显示对应全部记录。
 - AND/OR 切换改为统一青绿色与深灰蓝配色。
+
+## v0.9.0 中文 / English
+- 右上角改为“语言 / Language”，支持中文与 English 即时切换，无需重启。
+- “关于 / About”改为可点击按钮，点击后弹出版本、编译日期与版权信息。
+- 主界面、筛选条件、列操作、右键复制、导入导出和提示弹窗均支持双语。
