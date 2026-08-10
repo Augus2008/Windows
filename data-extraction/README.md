@@ -1,68 +1,44 @@
-# 数据提取（Windows 桌面版）
+# 数据提取工具
 
-用于导入、预览、筛选、去重并导出 Excel、CSV、TXT 数据。
+[![Windows Build](https://github.com/Augus2008/Windows/actions/workflows/build-data-extraction.yml/badge.svg)](https://github.com/Augus2008/Windows/actions/workflows/build-data-extraction.yml)
+[![Release](https://img.shields.io/github/v/release/Augus2008/Windows?filter=data-extraction-v*&label=stable)](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.11.0)
 
-## 功能
-- 导入 `.xlsx` / `.xls` / `.csv` / `.txt`
-- Excel 工作表选择，常见中文编码 CSV 自动识别
-- 全列关键词搜索与多条件 AND/OR 筛选
-- 包含、等于、前后缀、大小比较、空值判断等条件
-- 按需选择显示/导出的列、去重、预览前 500 行
-- 导出 Excel、CSV、制表符分隔 TXT
+面向 Windows 的本地数据提取程序，重点用于从 LOG / TRC 中快速提取 `values` 与 `percent`。
 
-## Windows 开发运行
-```bat
-py -m pip install -r requirements.txt
-py app.py
-```
+## 下载
 
-## 打包 EXE
-双击 `build_windows.bat`，或运行：
-```bat
-py -m pip install pyinstaller
-py -m PyInstaller --noconfirm --clean --windowed --name "数据提取" app.py
-```
-产物为 `dist/数据提取/数据提取.exe`。
+当前稳定版：**v0.11.0**
+[前往 GitHub Release 下载 DataExtractionTool.exe](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.11.0)
 
-## LOG 日志支持
-- 导入 `.log` 串口/设备日志并解析为行号、日期时间、运行时间、级别、模块、日志内容和原始行。
-- 自动识别 ERROR / WARN / OK / INFO，支持“一键仅看异常”。
+无需安装 Python。程序为单文件 EXE，首次启动可能需要数秒完成运行时解压。
 
-## v0.3.0 交互改进
-- 无分隔符 TXT 自动按“行号 + 文本内容”载入，整行支持搜索和条件筛选。
-- 表格支持多行选择、Ctrl+C 复制、右键复制单元格或所选行。
-- 强化 AND/OR 状态对比；列操作改为下拉菜单。
+## 核心流程
 
-## v0.5.0 LOG 字段提取
-- LOG 导入后自动提取 `status:`、`values:`、`percent:` 后的值为独立列。
-- 可在列操作中仅保留这些列后导出 Excel、CSV 或 TXT。
+1. 点击“导入并自动提取”。
+2. 选择 Excel、CSV、TXT、LOG 或 TRC。
+3. 对包含目标字段的日志，自动生成 `values`、`percent` 两列。
+4. 预览、复制、去重或高级筛选。
+5. 导出 Excel、CSV 或 TXT。
 
-## v0.6.0 TRC 追踪日志支持
-- 支持 `.trc` 大型设备追踪日志。
-- 自动拆分时间、计数器、序号、上下文、任务、标志、模块、级别、日志内容和原始行。
-- 自动提取 status、values、percent、vol、user、width、height 等常见字段。
-- “仅看异常”兼容 TRC 的 E/W/F 级别。
+## 主要特性
+- LOG / TRC 导入即提取 `values` 与 `percent`。
+- Excel 工作表切换；CSV/TXT 编码与分隔符兼容。
+- 多条件 AND / OR 筛选与整表关键词搜索。
+- 复制单元格、复制多行、选择导出列、去重。
+- 中文 / English 即时切换。
+- 清空全部数据后恢复初始状态。
+- 全程本地处理，不主动上传数据。
 
-## v0.7.0 导入即提取
-- 导入 LOG / TRC 后自动筛出同时包含 values 与 percent 的记录。
-- 结果默认仅显示 values、percent 两列，可直接导出，无需手工设置筛选条件。
-- 高级筛选保留为可选功能，并可随时“重新自动提取”。
+## 文档
+- [用户指南](docs/USER_GUIDE.md)
+- [格式与解析规则](docs/FORMATS.md)
+- [开发与构建](docs/DEVELOPMENT.md)
+- [发布流程](docs/RELEASING.md)
+- [故障排查](docs/TROUBLESHOOTING.md)
+- [更新日志](../CHANGELOG.md)
 
-## v0.8.0 界面与信息完善
-- 工具名称统一为“数据提取工具”，标题栏与界面显示版本 v0.8.0。
-- 关于区域显示版本号、编译日期和 Copyright 2026 ehisuy。
-- “工作表”改为“数据源 / 工作表”：Excel 可选择工作表，CSV/TXT/LOG/TRC 显示对应全部记录。
-- AND/OR 切换改为统一青绿色与深灰蓝配色。
+## 校验
+Release 页提供正式构建。下载后可使用 SHA-256 校验文件完整性。
 
-## v0.9.0 中文 / English
-- 右上角改为“语言 / Language”，支持中文与 English 即时切换，无需重启。
-- “关于 / About”改为可点击按钮，点击后弹出版本、编译日期与版权信息。
-- 主界面、筛选条件、列操作、右键复制、导入导出和提示弹窗均支持双语。
-
-## v0.10.0 语言菜单与数据清理
-- 右上角合并为单个“语言 / Language”下拉菜单，选择中文或 English。
-- 新增红色“清空全部数据 / Clear All Data”，确认后移除已导入文件、原始数据、结果、筛选条件和表格内容，并恢复初始状态。
-
-## v0.11.0 紧凑语言菜单与语义配色
-- 语言控件改为小型透明文字按钮，弹出菜单仅保留中文和 English，无重复项。
-- 工具栏采用不重复的语义配色：蓝、紫、青绿、琥珀、红、石墨蓝。
+## 许可证
+许可证尚未确定；如需复用、分发或商用，请先联系维护者。

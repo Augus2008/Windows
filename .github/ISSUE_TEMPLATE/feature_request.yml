@@ -1,0 +1,34 @@
+name: 功能需求 / Feature Request
+description: 建议新功能或体验改进
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "请提供脱敏的最小格式示例；不要提交凭据或隐私数据。"
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景 / Problem
+      description: 当前遇到了什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望方案 / Proposed solution
+      description: 希望工具如何处理？
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: 格式示例 / Sample format
+      description: 请使用脱敏的最小示例。
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级 / Priority
+      options: [低, 中, 高]
+    validations:
+      required: true

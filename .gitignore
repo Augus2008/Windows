@@ -1,11 +1,37 @@
-# 全局忽略
+# Build output
 **/bin/
 **/obj/
 **/publish/
-*.zip
+**/build/
+**/dist/
+**/output/
+*.spec
+
+# Python
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE and OS
 .vs/
+.vscode/
 .idea/
 *.user
 *.suo
 *.tmp
+.DS_Store
+Thumbs.db
+
+# Local data / sensitive materials
+*.zip
 *.log
+*.trc
+*.xlsx
+*.xls
+*.csv
+*.key
+*.pem
+.env
+*.exe
+*.sha256
