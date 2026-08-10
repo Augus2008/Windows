@@ -42,3 +42,8 @@ py -m PyInstaller --noconfirm --clean --windowed --name "数据提取" app.py
 - 自动拆分时间、计数器、序号、上下文、任务、标志、模块、级别、日志内容和原始行。
 - 自动提取 status、values、percent、vol、user、width、height 等常见字段。
 - “仅看异常”兼容 TRC 的 E/W/F 级别。
+
+## v0.7.0 导入即提取
+- 导入 LOG / TRC 后自动筛出同时包含 values 与 percent 的记录。
+- 结果默认仅显示 values、percent 两列，可直接导出，无需手工设置筛选条件。
+- 高级筛选保留为可选功能，并可随时“重新自动提取”。

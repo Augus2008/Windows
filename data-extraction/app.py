@@ -27,7 +27,7 @@ class App(ctk.CTk):
     def _ui(self):
         self.grid_columnconfigure(1, weight=1); self.grid_rowconfigure(1, weight=1)
         side = ctk.CTkFrame(self, width=285, corner_radius=0, fg_color="#12314a"); side.grid(row=0,column=0,rowspan=2,sticky="nsew"); side.grid_propagate(False)
-        ctk.CTkButton(side,text="＋  导入数据文件",height=44,command=self.import_file,font=("Microsoft YaHei UI",14,"bold")).pack(fill="x",padx=22,pady=(46,0))
+        ctk.CTkButton(side,text="＋  导入并自动提取",height=44,command=self.import_file,font=("Microsoft YaHei UI",14,"bold")).pack(fill="x",padx=22,pady=(46,0))
         self.file = ctk.CTkLabel(side,text="支持导入：Excel、CSV、TXT、LOG、TRC",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
         ctk.CTkLabel(side,text="工作表",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
         self.sheet = ctk.CTkComboBox(side,values=["请先导入文件"],state="disabled",command=self.change_sheet,height=36); self.sheet.pack(fill="x",padx=22,pady=(7,22))
@@ -35,11 +35,11 @@ class App(ctk.CTk):
         self.fmt=ctk.CTkSegmentedButton(side,values=["Excel","CSV","TXT"]); self.fmt.set("Excel"); self.fmt.pack(fill="x",padx=22,pady=(8,10))
         ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",command=self.export).pack(fill="x",padx=22)
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
-        self.status=ctk.CTkLabel(head,text="导入文件后即可开始提取",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
+        self.status=ctk.CTkLabel(head,text="导入文件，自动提取 values 和 percent",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
         self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
-        ctk.CTkLabel(box,text="筛选条件",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,padx=18,pady=(14,6),sticky="w")
+        ctk.CTkLabel(box,text="高级筛选（可选）",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,padx=18,pady=(14,6),sticky="w")
         self.logic=ctk.CTkSegmentedButton(box,values=["全部条件 AND","任一条件 OR"],width=300,selected_color="#2563eb",selected_hover_color="#1d4ed8",unselected_color="#dbeafe",unselected_hover_color="#bfdbfe",text_color="#0f172a"); self.logic.set("全部条件 AND"); self.logic.grid(row=0,column=1,padx=18,pady=(14,6),sticky="e")
         self.condbox=ctk.CTkFrame(box,fg_color="transparent"); self.condbox.grid(row=1,column=0,columnspan=2,padx=14,sticky="ew")
         ctk.CTkButton(box,text="＋ 添加条件",width=116,height=34,corner_radius=8,fg_color="#0ea5e9",hover_color="#0284c7",command=self.add_condition).grid(row=2,column=0,padx=18,pady=(8,14),sticky="w")
@@ -48,7 +48,7 @@ class App(ctk.CTk):
         self.quick=tk.StringVar(); e=ctk.CTkEntry(tools,textvariable=self.quick,placeholder_text="快速搜索全部列…",height=35,width=280); e.grid(row=0,column=0,sticky="w"); e.bind("<Return>",lambda _:self.apply())
         ctk.CTkButton(tools,text="搜索 / 应用筛选",width=120,height=35,fg_color="#2563eb",hover_color="#1d4ed8",command=self.apply).grid(row=0,column=1,padx=8)
         ctk.CTkButton(tools,text="去除重复行",width=105,height=35,fg_color="#7c3aed",hover_color="#6d28d9",command=self.dedupe).grid(row=0,column=2,padx=4)
-        ctk.CTkButton(tools,text="仅看异常",width=90,height=35,fg_color="#dc2626",hover_color="#b91c1c",command=self.only_errors).grid(row=0,column=3,padx=4)
+        ctk.CTkButton(tools,text="重新自动提取",width=90,height=35,fg_color="#dc2626",hover_color="#b91c1c",command=self.extract_primary).grid(row=0,column=3,padx=4)
         ctk.CTkButton(tools,text="恢复原始数据",width=110,height=35,fg_color="#f59e0b",hover_color="#d97706",text_color="#ffffff",command=self.reset).grid(row=0,column=4)
         self.colmenu=ctk.CTkOptionMenu(tools,values=["列操作","选择显示列…","显示全部列"],width=115,height=35,fg_color="#0891b2",button_color="#0e7490",button_hover_color="#155e75",command=self.column_action)
         self.colmenu.grid(row=0,column=5,padx=(8,0)); self.colmenu.set("列操作")
@@ -142,7 +142,7 @@ class App(ctk.CTk):
         if self.path and self.path.suffix.lower() in (".xlsx",".xls"):self.load_sheet(name)
     def load_sheet(self,name): self.source=pd.read_excel(self.path,sheet_name=name); self.loaded()
     def loaded(self):
-        self.source.columns=[str(x) for x in self.source.columns]; self.result=self.source.copy(); self.visible={x:True for x in self.source.columns}; self.clear_conditions(); self.refresh(); self.status.configure(text="数据已就绪，可以开始筛选与提取"); self.meta.configure(text=f"{self.path.name}  ·  {len(self.source):,} 行  ·  {len(self.source.columns)} 列")
+        self.source.columns=[str(x) for x in self.source.columns]; self.result=self.source.copy(); self.visible={x:True for x in self.source.columns}; self.clear_conditions(); extracted=self.extract_primary(silent=True); self.meta.configure(text=f"{self.path.name}  ·  原始 {len(self.source):,} 行  ·  提取 {len(self.result):,} 行"); (not extracted) and (self.refresh() or self.status.configure(text="未识别到 values / percent，可使用高级筛选"))
     def add_condition(self):
         if self.source is None: messagebox.showinfo("提示","请先导入数据文件。"); return
         r=ctk.CTkFrame(self.condbox,fg_color="#f4f7fb",corner_radius=8);r.pack(fill="x",pady=4)
@@ -180,12 +180,29 @@ class App(ctk.CTk):
             else:self.result=self.source.copy()
             self.refresh()
         except Exception as e:messagebox.showerror("筛选失败",str(e))
+    def extract_primary(self,silent=False):
+        if self.source is None:return False
+        work=self.source.copy()
+        if not {"values","percent"}.issubset(work.columns):
+            text_col=next((c for c in ("日志内容","文本内容","原始行") if c in work.columns),None)
+            if text_col:
+                for key in ("values","percent"):work[key]=work[text_col].astype(str).str.extract(r"(?i)(?<![A-Za-z0-9_])"+key+r"\s*[:=]\s*([^\s,;]+)",expand=False).fillna("")
+        if not {"values","percent"}.issubset(work.columns):
+            if not silent:messagebox.showinfo("提示","没有识别到 values 和 percent 字段。")
+            return False
+        mask=work["values"].astype(str).str.strip().ne("") & work["percent"].astype(str).str.strip().ne("")
+        self.result=work.loc[mask,["values","percent"]].copy()
+        self.visible={"values":True,"percent":True};self.refresh()
+        self.status.configure(text=f"已自动提取 values / percent：{len(self.result):,} 条")
+        if not silent and self.result.empty:messagebox.showinfo("提示","没有找到同时包含 values 和 percent 的记录。")
+        return not self.result.empty
+
     def only_errors(self):
         if self.source is None:return
         if "级别" not in self.source.columns:messagebox.showinfo("提示","仅 LOG / TRC 日志文件支持一键查看异常。");return
         self.result=self.source[self.source["级别"].astype(str).str.upper().isin(["ERROR","WARN","E","W","F","FATAL"])].copy();self.refresh()
     def reset(self):
-        if self.source is not None:self.result=self.source.copy();self.clear_conditions();self.refresh()
+        if self.source is not None:self.result=self.source.copy();self.visible={c:True for c in self.source.columns};self.clear_conditions();self.refresh()
     def dedupe(self):
         if self.result is None:return
         n=len(self.result);self.result=self.result.drop_duplicates().copy();self.refresh();messagebox.showinfo("完成",f"已移除 {n-len(self.result)} 行重复数据。")
