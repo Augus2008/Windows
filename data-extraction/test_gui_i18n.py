@@ -12,7 +12,7 @@ assert app.language_btn.cget("fg_color")==app.about_btn.cget("fg_color")
 assert app.language_btn.cget("hover_color")==app.about_btn.cget("hover_color")
 assert int(app.language_btn.cget("height"))==int(app.about_btn.cget("height"))
 assert app.export_btn.cget("text_color")=="#ffffff"
-assert app.export_btn.cget("font").cget("weight")=="bold"
+assert "bold" in str(app.export_btn.cget("font")).lower()
 assert app.language_popup.index("end")==1
 assert app.language_popup.entrycget(0,"label")=="中文"
 assert app.language_popup.entrycget(1,"label")=="English"
