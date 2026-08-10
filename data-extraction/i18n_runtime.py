@@ -7,7 +7,8 @@ def tr(self, key, **kwargs):
 def show_about(self):
     messagebox.showinfo(self.tr("about_title"), self.tr("about_body", version=self.app_version, date=self.build_date))
 
-def change_language(self, choice):
+def language_action(self, choice):
+    if choice not in ("中文","English"):return
     self.lang = "en" if choice == "English" else "zh"
     self.apply_language()
 def apply_language(self):
@@ -18,7 +19,7 @@ def apply_language(self):
     self.export_label.configure(text=t["export_format"])
     self.export_btn.configure(text=t["export"])
     self.about_btn.configure(text=t["about"])
-    self.language_label.configure(text=t["language"])
+    self.language_menu.configure(values=[t["language_menu"],"中文","English"]);self.language_menu.set(t["language_menu"])
     self.advanced_label.configure(text=t["advanced"])
     self.add_btn.configure(text=t["add"])
     self.clear_btn.configure(text=t["clear"])
@@ -27,6 +28,7 @@ def apply_language(self):
     self.dedupe_btn.configure(text=t["dedupe"])
     self.reextract_btn.configure(text=t["reextract"])
     self.restore_btn.configure(text=t["restore"])
+    self.clear_all_btn.configure(text=t["clear_all"])
     self.preview_label.configure(text=t["preview"])
     current = self.logic.get()
     is_all = current in (TEXT["zh"]["all"], TEXT["en"]["all"])

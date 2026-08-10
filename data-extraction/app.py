@@ -5,20 +5,20 @@ import csv, re
 import pandas as pd
 import customtkinter as ctk
 from i18n import TEXT
-from i18n_runtime import tr, show_about, change_language, apply_language, refresh_localized_state
+from i18n_runtime import tr, show_about, language_action, apply_language, refresh_localized_state
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.9.0"
+APP_VERSION = "0.10.0"
 BUILD_DATE = "2026-08-10"
 
 class App(ctk.CTk):
     tr = tr
     show_about = show_about
-    change_language = change_language
+    language_action = language_action
     apply_language = apply_language
     refresh_localized_state = refresh_localized_state
     def __init__(self):
@@ -53,8 +53,8 @@ class App(ctk.CTk):
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件，自动提取 values 和 percent",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
         self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
-        self.language_label=ctk.CTkLabel(head,text="语言",text_color="#475569",font=("Microsoft YaHei UI",11,"bold")); self.language_label.grid(row=0,column=1,padx=(0,12),pady=(12,0),sticky="e")
-        self.language=ctk.CTkSegmentedButton(head,values=["中文","English"],width=190,height=32,command=self.change_language,selected_color="#0f766e",selected_hover_color="#115e59",unselected_color="#e2e8f0",unselected_hover_color="#cbd5e1",text_color="#0f172a"); self.language.set("中文"); self.language.grid(row=1,column=1,padx=(0,28),pady=(0,10),sticky="e")
+        self.language_menu=ctk.CTkOptionMenu(head,values=["语言 ▾","中文","English"],width=142,height=34,command=self.language_action,fg_color="#0f766e",button_color="#115e59",button_hover_color="#134e4a")
+        self.language_menu.set("语言 ▾"); self.language_menu.grid(row=0,column=1,rowspan=2,padx=(0,28),pady=18,sticky="e")
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
         self.advanced_label=ctk.CTkLabel(box,text="高级筛选（可选）",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53")
@@ -75,8 +75,10 @@ class App(ctk.CTk):
         self.reextract_btn.grid(row=0,column=3,padx=4)
         self.restore_btn=ctk.CTkButton(tools,text="恢复原始数据",width=110,height=35,fg_color="#f59e0b",hover_color="#d97706",text_color="#ffffff",command=self.reset)
         self.restore_btn.grid(row=0,column=4)
+        self.clear_all_btn=ctk.CTkButton(tools,text="清空全部数据",width=112,height=35,fg_color="#dc2626",hover_color="#b91c1c",command=self.clear_all_data)
+        self.clear_all_btn.grid(row=0,column=5,padx=(8,0))
         self.colmenu=ctk.CTkOptionMenu(tools,values=["列操作","选择显示列…","显示全部列"],width=115,height=35,fg_color="#0891b2",button_color="#0e7490",button_hover_color="#155e75",command=self.column_action)
-        self.colmenu.grid(row=0,column=5,padx=(8,0)); self.colmenu.set("列操作")
+        self.colmenu.grid(row=0,column=6,padx=(8,0)); self.colmenu.set("列操作")
         table=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); table.grid(row=2,column=0,padx=22,pady=(8,20),sticky="nsew"); table.grid_columnconfigure(0,weight=1); table.grid_rowconfigure(1,weight=1)
         top=ctk.CTkFrame(table,fg_color="transparent"); top.grid(row=0,column=0,padx=16,pady=(13,7),sticky="ew"); top.grid_columnconfigure(1,weight=1)
         self.preview_label=ctk.CTkLabel(top,text="结果预览",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53")
@@ -229,6 +231,22 @@ class App(ctk.CTk):
         self.result=self.source[self.source["级别"].astype(str).str.upper().isin(["ERROR","WARN","E","W","F","FATAL"])].copy();self.refresh()
     def reset(self):
         if self.source is not None:self.result=self.source.copy();self.visible={c:True for c in self.source.columns};self.clear_conditions();self.refresh()
+    def clear_all_data(self, confirm=True):
+        if self.path is None and self.source is None:
+            return
+        if confirm and not messagebox.askyesno(self.tr("confirm"), self.tr("confirm_clear")):
+            return
+        self.path=None
+        self.source=None
+        self.result=None
+        self.visible={}
+        self.clear_conditions()
+        self.tree.delete(*self.tree.get_children())
+        self.tree["columns"]=()
+        self.rows.configure(text=self.tr("rows",n=0))
+        self.fmt.set("Excel")
+        self.refresh_localized_state()
+
     def dedupe(self):
         if self.result is None:return
         n=len(self.result);self.result=self.result.drop_duplicates().copy();self.refresh();messagebox.showinfo(self.tr("done"),self.tr("deduped",n=n-len(self.result)))
