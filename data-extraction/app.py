@@ -12,8 +12,9 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.11.0"
+APP_VERSION = "0.11.1"
 BUILD_DATE = "2026-08-10"
+LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
 class App(ctk.CTk):
     tr = tr
@@ -261,7 +262,10 @@ class App(ctk.CTk):
     def refresh(self):
         if self.result is None:return
         d=self.data();cols=list(d.columns);self.tree.delete(*self.tree.get_children());self.tree["columns"]=cols
-        for c in cols:self.tree.heading(c,text=c);self.tree.column(c,width=max(120,min(260,len(c)*16+80)),anchor="w")
+        for c in cols:
+            anchor = "w" if c in LEFT_ALIGNED_COLUMNS else "center"
+            self.tree.heading(c,text=c,anchor="center")
+            self.tree.column(c,width=max(120,min(260,len(c)*16+80)),anchor=anchor)
         for _,r in d.head(PREVIEW_ROWS).iterrows():self.tree.insert("","end",values=["" if pd.isna(x) else str(x)[:500] for x in r])
         self.rows.configure(text=self.tr("rows",n=len(d))+(self.tr("preview_limit") if len(d)>PREVIEW_ROWS else ""))
     def column_action(self,choice):
