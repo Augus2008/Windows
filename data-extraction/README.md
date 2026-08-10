@@ -32,3 +32,7 @@ py -m PyInstaller --noconfirm --clean --windowed --name "数据提取" app.py
 - 无分隔符 TXT 自动按“行号 + 文本内容”载入，整行支持搜索和条件筛选。
 - 表格支持多行选择、Ctrl+C 复制、右键复制单元格或所选行。
 - 强化 AND/OR 状态对比；列操作改为下拉菜单。
+
+## v0.5.0 LOG 字段提取
+- LOG 导入后自动提取 `status:`、`values:`、`percent:` 后的值为独立列。
+- 可在列操作中仅保留这些列后导出 Excel、CSV 或 TXT。

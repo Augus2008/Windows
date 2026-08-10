@@ -107,7 +107,10 @@ class App(ctk.CTk):
             module="";mm=re.match(r"([^ ]+\.(?:c|cpp|h):\d+):?",msg)
             if mm:module=mm.group(1)
             rows.append({"行号":no,"日期时间":dt.strip(),"运行时间(秒)":runtime,"级别":level,"模块/来源":module,"日志内容":msg,"原始行":line})
-        self.source=pd.DataFrame(rows);self.loaded()
+        self.source=pd.DataFrame(rows)
+        for key in ("status","values","percent"):
+            self.source[key]=self.source["日志内容"].str.extract(r"(?i)(?<![A-Za-z0-9_])"+key+r"\s*:\s*([^\s,;]+)",expand=False).fillna("")
+        self.loaded()
 
     def change_sheet(self,name):
         if self.path and self.path.suffix.lower() in (".xlsx",".xls"):self.load_sheet(name)
