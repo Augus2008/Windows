@@ -36,3 +36,9 @@ py -m PyInstaller --noconfirm --clean --windowed --name "数据提取" app.py
 ## v0.5.0 LOG 字段提取
 - LOG 导入后自动提取 `status:`、`values:`、`percent:` 后的值为独立列。
 - 可在列操作中仅保留这些列后导出 Excel、CSV 或 TXT。
+
+## v0.6.0 TRC 追踪日志支持
+- 支持 `.trc` 大型设备追踪日志。
+- 自动拆分时间、计数器、序号、上下文、任务、标志、模块、级别、日志内容和原始行。
+- 自动提取 status、values、percent、vol、user、width、height 等常见字段。
+- “仅看异常”兼容 TRC 的 E/W/F 级别。

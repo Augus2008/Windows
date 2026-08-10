@@ -28,7 +28,7 @@ class App(ctk.CTk):
         self.grid_columnconfigure(1, weight=1); self.grid_rowconfigure(1, weight=1)
         side = ctk.CTkFrame(self, width=285, corner_radius=0, fg_color="#12314a"); side.grid(row=0,column=0,rowspan=2,sticky="nsew"); side.grid_propagate(False)
         ctk.CTkButton(side,text="＋  导入数据文件",height=44,command=self.import_file,font=("Microsoft YaHei UI",14,"bold")).pack(fill="x",padx=22,pady=(46,0))
-        self.file = ctk.CTkLabel(side,text="支持导入：Excel、CSV、TXT、LOG",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
+        self.file = ctk.CTkLabel(side,text="支持导入：Excel、CSV、TXT、LOG、TRC",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
         ctk.CTkLabel(side,text="工作表",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
         self.sheet = ctk.CTkComboBox(side,values=["请先导入文件"],state="disabled",command=self.change_sheet,height=36); self.sheet.pack(fill="x",padx=22,pady=(7,22))
         ctk.CTkLabel(side,text="导出格式",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
@@ -36,7 +36,7 @@ class App(ctk.CTk):
         ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",command=self.export).pack(fill="x",padx=22)
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件后即可开始提取",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
-        self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT 与 LOG 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
+        self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
         ctk.CTkLabel(box,text="筛选条件",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,padx=18,pady=(14,6),sticky="w")
@@ -60,12 +60,14 @@ class App(ctk.CTk):
         self.tree=ttk.Treeview(wrap,show="headings",selectmode="extended"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew"); self.tree.bind("<Control-c>",self.copy_selection); self.tree.bind("<Button-3>",self.popup_copy_menu)
 
     def import_file(self):
-        p=filedialog.askopenfilename(title="选择数据文件",filetypes=[("数据文件","*.xlsx *.xls *.csv *.txt *.log"),("所有文件","*.*")])
+        p=filedialog.askopenfilename(title="选择数据文件",filetypes=[("数据文件","*.xlsx *.xls *.csv *.txt *.log *.trc"),("所有文件","*.*")])
         if not p:return
         self.path=Path(p)
         try:
             if self.path.suffix.lower() in (".xlsx",".xls"):
                 names=pd.ExcelFile(p).sheet_names; self.sheet.configure(values=names,state="normal"); self.sheet.set(names[0]); self.load_sheet(names[0])
+            elif self.path.suffix.lower()==".trc":
+                self.sheet.configure(values=["TRC 追踪日志"],state="disabled"); self.load_trc(p)
             elif self.path.suffix.lower()==".log":
                 self.sheet.configure(values=["LOG 日志文件"],state="disabled"); self.load_log(p)
             else:
@@ -88,6 +90,30 @@ class App(ctk.CTk):
         except Exception:
             self.source=pd.DataFrame({"行号":range(1,len(lines)+1),"文本内容":lines})
         self.loaded()
+    def load_trc(self,p):
+        lines=None
+        for enc in ("utf-8-sig","utf-8","gb18030","gbk","latin1"):
+            try:
+                with open(p,"r",encoding=enc) as f:lines=f.read().splitlines()
+                break
+            except UnicodeDecodeError:continue
+        if lines is None:raise ValueError("无法识别 TRC 文件编码")
+        rows=[]
+        pat=re.compile(r"^\[(?P<time>\d{2}:\d{2}:\d{2}\.\d{3})\]\s+\[\s*(?P<counter>\d+)\]\s+\[\s*(?P<seq>\d+)\]\s+\[(?P<context>[^]]*)\]\s+\[(?P<task>[^]]*)\]\s+\[(?P<flag>[^]]*)\]\s*(?P<module>[^/ :]*?)\s*/(?P<level>[A-Za-z])\s*:\s*(?P<message>.*)$")
+        for no,line in enumerate(lines,1):
+            m=pat.match(line)
+            if m:
+                d=m.groupdict();msg=d["message"]
+                row={"行号":no,"时间":d["time"],"计数器":d["counter"],"序号":d["seq"],"上下文":d["context"].strip(),"任务":d["task"].strip(),"标志":d["flag"].strip(),"模块":d["module"].strip(),"级别":d["level"].upper(),"日志内容":msg,"原始行":line}
+            else:
+                msg=line;row={"行号":no,"时间":"","计数器":"","序号":"","上下文":"","任务":"","标志":"","模块":"","级别":"RAW","日志内容":msg,"原始行":line}
+            for key in ("status","values","percent","vol","user","width","height"):
+                km=re.search(r"(?i)(?<![A-Za-z0-9_])"+key+r"\s*[:=]\s*([^\s,;]+)",msg)
+                if km:row[key]=km.group(1)
+            rows.append(row)
+        self.source=pd.DataFrame(rows).fillna("")
+        self.loaded()
+
     def load_log(self,p):
         text=None
         for enc in ("utf-8-sig","utf-8","gb18030","gbk","latin1"):
@@ -156,8 +182,8 @@ class App(ctk.CTk):
         except Exception as e:messagebox.showerror("筛选失败",str(e))
     def only_errors(self):
         if self.source is None:return
-        if "级别" not in self.source.columns:messagebox.showinfo("提示","仅 LOG 日志文件支持一键查看异常。");return
-        self.result=self.source[self.source["级别"].isin(["ERROR","WARN"])].copy();self.refresh()
+        if "级别" not in self.source.columns:messagebox.showinfo("提示","仅 LOG / TRC 日志文件支持一键查看异常。");return
+        self.result=self.source[self.source["级别"].astype(str).str.upper().isin(["ERROR","WARN","E","W","F","FATAL"])].copy();self.refresh()
     def reset(self):
         if self.source is not None:self.result=self.source.copy();self.clear_conditions();self.refresh()
     def dedupe(self):
