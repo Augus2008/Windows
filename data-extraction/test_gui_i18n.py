@@ -16,8 +16,8 @@ assert app.language_btn.cget("text")==TEXT["en"]["language_menu"]
 colors=[app.search_btn.cget("fg_color"),app.dedupe_btn.cget("fg_color"),app.reextract_btn.cget("fg_color"),app.restore_btn.cget("fg_color"),app.clear_all_btn.cget("fg_color"),app.colmenu.cget("fg_color")]
 assert len(colors)==len(set(colors)),colors
 app.source=pd.DataFrame({"values":["4184mV"],"percent":["100%"]});app.result=app.source.copy();app.path=Path("sample.trc");app.visible={"values":True,"percent":True};app.refresh()
-assert app.tree.heading("values","anchor")=="center"
-assert app.tree.column("values","anchor")=="center"
+assert str(app.tree.heading("values","anchor"))=="center"
+assert str(app.tree.column("values","anchor"))=="center"
 app.clear_all_data(confirm=False)
 assert app.path is None and app.source is None and app.result is None and not app.tree.get_children()
 app.language_action("中文");assert app.language_btn.cget("text")==TEXT["zh"]["language_menu"]
