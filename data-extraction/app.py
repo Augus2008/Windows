@@ -12,7 +12,7 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.10.0"
+APP_VERSION = "0.10.1"
 BUILD_DATE = "2026-08-10"
 
 class App(ctk.CTk):
