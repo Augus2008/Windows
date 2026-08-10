@@ -21,11 +21,11 @@ jobs:
       - name: Test values and percent extraction
         run: python test_extraction.py
       - name: Build EXE
-        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "DataExtractor" app.py
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name "DataExtractionTool" app.py
       - name: Smoke-test GUI startup
         shell: powershell
         run: |
-          $p = Start-Process -FilePath "dist\DataExtractor.exe" -PassThru
+          $p = Start-Process -FilePath "dist\DataExtractionTool.exe" -PassThru
           Start-Sleep -Seconds 10
           if ($p.HasExited) { throw "GUI exited during startup (code $($p.ExitCode))" }
           Stop-Process -Id $p.Id -Force
@@ -33,11 +33,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DataExtractor-Windows
-          path: data-extraction/dist/DataExtractor.exe
+          path: data-extraction/dist/DataExtractionTool.exe
           if-no-files-found: error
       - name: Publish Windows EXE to Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Data Extractor v0.1.0
+          name: 数据提取工具
           prerelease: true
-          files: data-extraction/dist/DataExtractor.exe
+          files: data-extraction/dist/DataExtractionTool.exe

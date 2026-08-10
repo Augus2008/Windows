@@ -9,11 +9,14 @@ ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
+APP_NAME = "数据提取工具"
+APP_VERSION = "0.8.0"
+BUILD_DATE = "2026-08-10"
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("数据提取")
+        self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1360x820"); self.minsize(1080, 680)
         self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}
         self._style(); self._ui()
@@ -29,18 +32,26 @@ class App(ctk.CTk):
         side = ctk.CTkFrame(self, width=285, corner_radius=0, fg_color="#12314a"); side.grid(row=0,column=0,rowspan=2,sticky="nsew"); side.grid_propagate(False)
         ctk.CTkButton(side,text="＋  导入并自动提取",height=44,command=self.import_file,font=("Microsoft YaHei UI",14,"bold")).pack(fill="x",padx=22,pady=(46,0))
         self.file = ctk.CTkLabel(side,text="支持导入：Excel、CSV、TXT、LOG、TRC",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
-        ctk.CTkLabel(side,text="工作表",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
-        self.sheet = ctk.CTkComboBox(side,values=["请先导入文件"],state="disabled",command=self.change_sheet,height=36); self.sheet.pack(fill="x",padx=22,pady=(7,22))
+        ctk.CTkLabel(side,text="数据源 / 工作表",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
+        self.sheet = ctk.CTkComboBox(side,values=["导入后显示数据源"],state="readonly",command=self.change_sheet,height=36); self.sheet.pack(fill="x",padx=22,pady=(7,22)); self.sheet.set("导入后显示数据源")
         ctk.CTkLabel(side,text="导出格式",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold")).pack(anchor="w",padx=24)
         self.fmt=ctk.CTkSegmentedButton(side,values=["Excel","CSV","TXT"]); self.fmt.set("Excel"); self.fmt.pack(fill="x",padx=22,pady=(8,10))
         ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",command=self.export).pack(fill="x",padx=22)
+        self.about=ctk.CTkFrame(side,fg_color="#193d57",corner_radius=10)
+        self.about.pack(side="bottom",fill="x",padx=20,pady=22)
+        ctk.CTkLabel(self.about,text="关于",font=("Microsoft YaHei UI",13,"bold"),text_color="#ffffff").pack(anchor="w",padx=14,pady=(12,4))
+        ctk.CTkLabel(self.about,text=f"版本号：v{APP_VERSION}",text_color="#d9eaf7").pack(anchor="w",padx=14)
+        ctk.CTkLabel(self.about,text=f"编译日期：{BUILD_DATE}",text_color="#b9d6eb").pack(anchor="w",padx=14,pady=(2,0))
+        ctk.CTkLabel(self.about,text="Copyright 2026 ehisuy",text_color="#b9d6eb").pack(anchor="w",padx=14,pady=(2,12))
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件，自动提取 values 和 percent",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
         self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
+        self.version_badge=ctk.CTkLabel(head,text=f"v{APP_VERSION}",width=76,height=30,corner_radius=15,fg_color="#e2e8f0",text_color="#334155",font=("Microsoft YaHei UI",11,"bold"))
+        self.version_badge.grid(row=0,column=1,rowspan=2,padx=(0,28),pady=18,sticky="e")
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
         ctk.CTkLabel(box,text="高级筛选（可选）",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53").grid(row=0,column=0,padx=18,pady=(14,6),sticky="w")
-        self.logic=ctk.CTkSegmentedButton(box,values=["全部条件 AND","任一条件 OR"],width=300,selected_color="#2563eb",selected_hover_color="#1d4ed8",unselected_color="#dbeafe",unselected_hover_color="#bfdbfe",text_color="#0f172a"); self.logic.set("全部条件 AND"); self.logic.grid(row=0,column=1,padx=18,pady=(14,6),sticky="e")
+        self.logic=ctk.CTkSegmentedButton(box,values=["全部条件 AND","任一条件 OR"],width=300,selected_color="#0f766e",selected_hover_color="#115e59",unselected_color="#475569",unselected_hover_color="#334155",text_color="#ffffff"); self.logic.set("全部条件 AND"); self.logic.grid(row=0,column=1,padx=18,pady=(14,6),sticky="e")
         self.condbox=ctk.CTkFrame(box,fg_color="transparent"); self.condbox.grid(row=1,column=0,columnspan=2,padx=14,sticky="ew")
         ctk.CTkButton(box,text="＋ 添加条件",width=116,height=34,corner_radius=8,fg_color="#0ea5e9",hover_color="#0284c7",command=self.add_condition).grid(row=2,column=0,padx=18,pady=(8,14),sticky="w")
         ctk.CTkButton(box,text="清空筛选",width=104,height=34,corner_radius=8,fg_color="#64748b",hover_color="#475569",command=self.clear_conditions).grid(row=2,column=1,padx=18,pady=(8,14),sticky="e")
@@ -65,13 +76,13 @@ class App(ctk.CTk):
         self.path=Path(p)
         try:
             if self.path.suffix.lower() in (".xlsx",".xls"):
-                names=pd.ExcelFile(p).sheet_names; self.sheet.configure(values=names,state="normal"); self.sheet.set(names[0]); self.load_sheet(names[0])
+                names=pd.ExcelFile(p).sheet_names; self.sheet.configure(values=names,state="readonly"); self.sheet.set(names[0]); self.load_sheet(names[0])
             elif self.path.suffix.lower()==".trc":
-                self.sheet.configure(values=["TRC 追踪日志"],state="disabled"); self.load_trc(p)
+                self.sheet.configure(values=["TRC · 全部记录"],state="readonly"); self.sheet.set("TRC · 全部记录"); self.load_trc(p)
             elif self.path.suffix.lower()==".log":
-                self.sheet.configure(values=["LOG 日志文件"],state="disabled"); self.load_log(p)
+                self.sheet.configure(values=["LOG · 全部记录"],state="readonly"); self.sheet.set("LOG · 全部记录"); self.load_log(p)
             else:
-                self.sheet.configure(values=["CSV / TXT 文件"],state="disabled"); self.load_text(p)
+                label="CSV · 全部记录" if self.path.suffix.lower()==".csv" else "TXT · 全部记录"; self.sheet.configure(values=[label],state="readonly"); self.sheet.set(label); self.load_text(p)
             self.file.configure(text=f"已导入\n{self.path.name}")
         except Exception as e: messagebox.showerror("导入失败",f"无法读取该文件：\n{e}")
     def load_text(self,p):

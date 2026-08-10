@@ -47,3 +47,9 @@ py -m PyInstaller --noconfirm --clean --windowed --name "数据提取" app.py
 - 导入 LOG / TRC 后自动筛出同时包含 values 与 percent 的记录。
 - 结果默认仅显示 values、percent 两列，可直接导出，无需手工设置筛选条件。
 - 高级筛选保留为可选功能，并可随时“重新自动提取”。
+
+## v0.8.0 界面与信息完善
+- 工具名称统一为“数据提取工具”，标题栏与界面显示版本 v0.8.0。
+- 关于区域显示版本号、编译日期和 Copyright 2026 ehisuy。
+- “工作表”改为“数据源 / 工作表”：Excel 可选择工作表，CSV/TXT/LOG/TRC 显示对应全部记录。
+- AND/OR 切换改为统一青绿色与深灰蓝配色。
