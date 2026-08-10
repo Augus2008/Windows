@@ -12,7 +12,7 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.11.1"
+APP_VERSION = "0.11.2"
 BUILD_DATE = "2026-08-10"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
@@ -47,15 +47,15 @@ class App(ctk.CTk):
         self.export_label=ctk.CTkLabel(side,text="导出格式",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold"))
         self.export_label.pack(anchor="w",padx=24)
         self.fmt=ctk.CTkSegmentedButton(side,values=["Excel","CSV","TXT"]); self.fmt.set("Excel"); self.fmt.pack(fill="x",padx=22,pady=(8,10))
-        self.export_btn=ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",command=self.export)
+        self.export_btn=ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",text_color="#ffffff",font=("Microsoft YaHei UI",13,"bold"),command=self.export)
         self.export_btn.pack(fill="x",padx=22)
         self.about_btn=ctk.CTkButton(side,text="关于",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_about)
-        self.about_btn.pack(side="bottom",fill="x",padx=20,pady=22)
+        self.about_btn.pack(side="bottom",fill="x",padx=20,pady=(0,22))
+        self.language_btn=ctk.CTkButton(side,text="语言",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_language_menu)
+        self.language_btn.pack(side="bottom",fill="x",padx=20,pady=(0,8))
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件，自动提取 values 和 percent",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
         self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
-        self.language_btn=ctk.CTkButton(head,text="语言 ▾",width=82,height=30,fg_color="transparent",hover_color="#e2e8f0",text_color="#334155",border_width=0,command=self.show_language_menu)
-        self.language_btn.grid(row=0,column=1,rowspan=2,padx=(0,24),pady=18,sticky="e")
         self.language_popup=tk.Menu(self,tearoff=0,bg="#ffffff",fg="#334155",activebackground="#e2e8f0",activeforeground="#0f172a",relief="flat",bd=1)
         self.language_popup.add_command(label="中文",command=lambda:self.language_action("中文"))
         self.language_popup.add_command(label="English",command=lambda:self.language_action("English"))
@@ -92,7 +92,7 @@ class App(ctk.CTk):
         self.tree=ttk.Treeview(wrap,show="headings",selectmode="extended"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew"); self.tree.bind("<Control-c>",self.copy_selection); self.tree.bind("<Button-3>",self.popup_copy_menu)
 
     def show_language_menu(self):
-        self.language_popup.tk_popup(self.winfo_rootx()+self.winfo_width()-132,self.winfo_rooty()+58)
+        self.language_popup.tk_popup(self.language_btn.winfo_rootx(), self.language_btn.winfo_rooty()-72)
 
 
     def import_file(self):

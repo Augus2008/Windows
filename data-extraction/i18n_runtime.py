@@ -49,7 +49,7 @@ def refresh_localized_state(self):
         self.file.configure(text=t["supported"])
         self.sheet.configure(values=[t["source_empty"]])
         self.sheet.set(t["source_empty"])
-        self.status.configure(text=t["header"])
+        self.status.configure(text=t["header_empty"])
         self.meta.configure(text=t["files"])
     else:
         self.file.configure(text=t["imported"].format(name=self.path.name))

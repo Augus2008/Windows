@@ -11,8 +11,8 @@ Windows 桌面工具与示例项目集合。当前仓库以 **数据提取工具
 
 ## 数据提取工具
 
-当前稳定版：**v0.11.1**
-[下载 Windows EXE](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.11.1) · [项目主页](data-extraction/README.md) · [文档中心](data-extraction/docs/README.md)
+当前稳定版：**v0.11.2**
+[下载 Windows EXE](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.11.2) · [项目主页](data-extraction/README.md) · [文档中心](data-extraction/docs/README.md)
 
 主要能力：
 - Excel、CSV、TXT、LOG、TRC 本地读取。
