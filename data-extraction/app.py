@@ -12,7 +12,7 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.10.1"
+APP_VERSION = "0.11.0"
 BUILD_DATE = "2026-08-10"
 
 class App(ctk.CTk):
@@ -53,8 +53,11 @@ class App(ctk.CTk):
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件，自动提取 values 和 percent",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
         self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
-        self.language_menu=ctk.CTkOptionMenu(head,values=["语言 ▾","中文","English"],width=142,height=34,command=self.language_action,fg_color="#0f766e",button_color="#115e59",button_hover_color="#134e4a")
-        self.language_menu.set("语言 ▾"); self.language_menu.grid(row=0,column=1,rowspan=2,padx=(0,28),pady=18,sticky="e")
+        self.language_btn=ctk.CTkButton(head,text="语言 ▾",width=82,height=30,fg_color="transparent",hover_color="#e2e8f0",text_color="#334155",border_width=0,command=self.show_language_menu)
+        self.language_btn.grid(row=0,column=1,rowspan=2,padx=(0,24),pady=18,sticky="e")
+        self.language_popup=tk.Menu(self,tearoff=0,bg="#ffffff",fg="#334155",activebackground="#e2e8f0",activeforeground="#0f172a",relief="flat",bd=1)
+        self.language_popup.add_command(label="中文",command=lambda:self.language_action("中文"))
+        self.language_popup.add_command(label="English",command=lambda:self.language_action("English"))
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
         self.advanced_label=ctk.CTkLabel(box,text="高级筛选（可选）",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53")
@@ -71,13 +74,13 @@ class App(ctk.CTk):
         self.search_btn.grid(row=0,column=1,padx=8)
         self.dedupe_btn=ctk.CTkButton(tools,text="去除重复行",width=105,height=35,fg_color="#7c3aed",hover_color="#6d28d9",command=self.dedupe)
         self.dedupe_btn.grid(row=0,column=2,padx=4)
-        self.reextract_btn=ctk.CTkButton(tools,text="重新自动提取",width=90,height=35,fg_color="#dc2626",hover_color="#b91c1c",command=self.extract_primary)
+        self.reextract_btn=ctk.CTkButton(tools,text="重新自动提取",width=90,height=35,fg_color="#0f766e",hover_color="#115e59",command=self.extract_primary)
         self.reextract_btn.grid(row=0,column=3,padx=4)
-        self.restore_btn=ctk.CTkButton(tools,text="恢复原始数据",width=110,height=35,fg_color="#f59e0b",hover_color="#d97706",text_color="#ffffff",command=self.reset)
+        self.restore_btn=ctk.CTkButton(tools,text="恢复原始数据",width=110,height=35,fg_color="#d97706",hover_color="#b45309",text_color="#ffffff",command=self.reset)
         self.restore_btn.grid(row=0,column=4)
         self.clear_all_btn=ctk.CTkButton(tools,text="清空全部数据",width=112,height=35,fg_color="#dc2626",hover_color="#b91c1c",command=self.clear_all_data)
         self.clear_all_btn.grid(row=0,column=5,padx=(8,0))
-        self.colmenu=ctk.CTkOptionMenu(tools,values=["列操作","选择显示列…","显示全部列"],width=115,height=35,fg_color="#0891b2",button_color="#0e7490",button_hover_color="#155e75",command=self.column_action)
+        self.colmenu=ctk.CTkOptionMenu(tools,values=["列操作","选择显示列…","显示全部列"],width=115,height=35,fg_color="#475569",button_color="#334155",button_hover_color="#1e293b",command=self.column_action)
         self.colmenu.grid(row=0,column=6,padx=(8,0)); self.colmenu.set("列操作")
         table=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); table.grid(row=2,column=0,padx=22,pady=(8,20),sticky="nsew"); table.grid_columnconfigure(0,weight=1); table.grid_rowconfigure(1,weight=1)
         top=ctk.CTkFrame(table,fg_color="transparent"); top.grid(row=0,column=0,padx=16,pady=(13,7),sticky="ew"); top.grid_columnconfigure(1,weight=1)
@@ -86,6 +89,10 @@ class App(ctk.CTk):
         self.rows=ctk.CTkLabel(top,text="0 行",text_color="#607d8b"); self.rows.grid(row=0,column=1,padx=12,sticky="w")
         wrap=ctk.CTkFrame(table,fg_color="transparent"); wrap.grid(row=1,column=0,padx=15,pady=(0,15),sticky="nsew"); wrap.grid_columnconfigure(0,weight=1); wrap.grid_rowconfigure(0,weight=1)
         self.tree=ttk.Treeview(wrap,show="headings",selectmode="extended"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew"); self.tree.bind("<Control-c>",self.copy_selection); self.tree.bind("<Button-3>",self.popup_copy_menu)
+
+    def show_language_menu(self):
+        self.language_popup.tk_popup(self.winfo_rootx()+self.winfo_width()-132,self.winfo_rooty()+58)
+
 
     def import_file(self):
         p=filedialog.askopenfilename(title=self.tr("select_file"),filetypes=[(self.tr("data_files"),"*.xlsx *.xls *.csv *.txt *.log *.trc"),(self.tr("all_files"),"*.*")])
