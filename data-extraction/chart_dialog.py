@@ -13,6 +13,7 @@ rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "Arial Unicode MS", 
 rcParams["axes.unicode_minus"] = False
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+MAX_CHART_POINTS = 5000
 NUMBER_UNIT_RE = re.compile(r'^\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*(.*?)\s*$')
 
 def parse_numeric_unit(value):
@@ -38,6 +39,22 @@ def convert_series(parsed, detected_unit, target_unit):
         elif target not in UNIT_SCALE: converted.append(number)
         else: converted.append(None)
     return converted
+
+def representative_indices(series_values, max_points=MAX_CHART_POINTS):
+    length = max((len(v) for v in series_values), default=0)
+    if length <= max_points: return list(range(length))
+    valid_series = [[x if x is not None else float('nan') for x in values] for values in series_values]
+    edge = max(2, max_points // max(1, len(valid_series)*2))
+    bucket_count = max(1, edge-1); selected={0,length-1}
+    for bucket in range(bucket_count):
+        start=1+(length-2)*bucket//bucket_count;end=1+(length-2)*(bucket+1)//bucket_count
+        if end<=start:continue
+        for values in valid_series:
+            valid=[i for i in range(start,end) if values[i]==values[i]]
+            if valid:selected.add(min(valid,key=lambda i:values[i]));selected.add(max(valid,key=lambda i:values[i]))
+    if len(selected)>max_points:
+        ordered=sorted(selected);selected={ordered[round(i*(len(ordered)-1)/(max_points-1))] for i in range(max_points)}
+    return sorted(selected)
 
 class ChartDialog(ctk.CTkToplevel):
     def __init__(self, parent, data, lang='zh', source_name='', settings=None):
@@ -84,28 +101,38 @@ class ChartDialog(ctk.CTkToplevel):
     def axis_label(self,item):
         n=item['name'].get().strip();u=item['unit'].get().strip();return f'{n}（{u}）' if u else n
     def selected(self): return [(k,v) for k,v in self.series.items() if v['enabled'].get()]
+    def plotting_data(self):
+        chosen=self.selected();record_label='记录序号' if self.lang=='zh' else 'Record index';xchoice=self.x_axis.get();xdata=list(range(1,len(self.data)+1)) if xchoice==record_label or xchoice not in self.data.columns else list(self.data[xchoice])
+        converted=[convert_series(item['parsed'],item['detected_unit'],item['unit'].get()) for _,item in chosen]
+        indices=representative_indices(converted,MAX_CHART_POINTS)
+        rows=[]
+        for idx in indices:
+            values=[series[idx] for series in converted]
+            if any(value is not None for value in values):rows.append((xdata[idx],values,idx))
+        return chosen,rows
+
     def draw(self):
-        chosen=self.selected()
+        chosen,rows=self.plotting_data()
         if not chosen: raise ValueError('请至少选择一个数据系列。' if self.lang=='zh' else 'Select at least one series.')
-        self.figure.clear();ax=self.figure.add_subplot(111);axes=[ax];record_label='记录序号' if self.lang=='zh' else 'Record index';xchoice=self.x_axis.get();xdata=list(range(1,len(self.data)+1)) if xchoice==record_label or xchoice not in self.data.columns else list(self.data[xchoice])
+        self.figure.clear();ax=self.figure.add_subplot(111);axes=[ax]
         if len(chosen)>1: axes.append(ax.twinx())
-        lines=[];valid=set();ctype=self.chart_type.get().lower()
-        for i,(key,item) in enumerate(chosen):
-            target=axes[min(i,len(axes)-1)];numbers=convert_series(item['parsed'],item['detected_unit'],item['unit'].get());points=[(xdata[x],n,x) for x,n in enumerate(numbers) if n is not None];valid.update(idx for _,_,idx in points)
+        lines=[];ctype=self.chart_type.get().lower()
+        for series_index,(key,item) in enumerate(chosen):
+            target=axes[min(series_index,len(axes)-1)];points=[(x,values[series_index]) for x,values,_ in rows if values[series_index] is not None]
             if points:
-                xs,ys,_idx=zip(*points)
+                xs,ys=zip(*points)
                 if '散点' in ctype or 'scatter' in ctype: line=target.scatter(xs,ys,color=item['color'],s=20,label=item['name'].get())
                 else:
                     marker='o' if ('数据点' in ctype or 'marker' in ctype) else None
                     line,=target.plot(xs,ys,color=item['color'],linewidth=1.8,marker=marker,markersize=4,label=item['name'].get())
                 lines.append(line)
-            target.set_ylabel(self.axis_label(item),color=item['color'],fontproperties=None);target.tick_params(axis='y',labelcolor=item['color'])
-        ax.set_xlabel(self.x_name.get().strip() or xchoice);ax.set_title(self.title_var.get().strip());ax.grid(self.grid_var.get(),alpha=.25)
-        if self.legend_var.get() and lines: ax.legend(lines,[x.get_label() for x in lines],loc='upper center',bbox_to_anchor=(0.5,-0.13),ncol=max(1,len(lines)),frameon=False)
-        self.figure.tight_layout(rect=[0,0.12,1,1]);return len(valid),len(self.data)-len(valid)
+            target.set_ylabel(self.axis_label(item),color=item['color']);target.tick_params(axis='y',labelcolor=item['color'])
+        xchoice=self.x_axis.get();ax.set_xlabel(self.x_name.get().strip() or xchoice);ax.set_title(self.title_var.get().strip());ax.grid(self.grid_var.get(),alpha=.25)
+        if self.legend_var.get() and lines:ax.legend(lines,[x.get_label() for x in lines],loc='upper center',bbox_to_anchor=(0.5,-0.13),ncol=max(1,len(lines)),frameon=False)
+        self.figure.tight_layout(rect=[0,0.12,1,1]);return len(rows),len(self.data)-len(rows)
     def refresh_preview(self):
         try:
-            valid,skipped=self.draw();self.canvas.draw_idle();self.stats.configure(text=(f'当前结果：{len(self.data):,} 条  ·  有效绘图：{valid:,} 条  ·  跳过：{skipped:,} 条' if self.lang=='zh' else f'Rows: {len(self.data):,}  ·  Valid: {valid:,}  ·  Skipped: {skipped:,}'))
+            valid,skipped=self.draw();self.canvas.draw_idle();self.stats.configure(text=(f'提取结果：{len(self.data):,} 条  ·  实际绘图：{valid:,} 条  ·  未参与绘图：{skipped:,} 条' if self.lang=='zh' else f'Extracted: {len(self.data):,}  ·  Plotted: {valid:,}  ·  Not plotted: {skipped:,}'))
         except (tk.TclError,ValueError) as e:
             if self.winfo_exists(): self.stats.configure(text=str(e))
     def collect_settings(self):
@@ -129,13 +156,11 @@ class ChartDialog(ctk.CTkToplevel):
         self.destroy()
 
     def export_excel(self, path):
-        chosen=self.selected();record_label='记录序号' if self.lang=='zh' else 'Record index';xchoice=self.x_axis.get();xdata=list(range(1,len(self.data)+1)) if xchoice==record_label or xchoice not in self.data.columns else list(self.data[xchoice])
-        wb=Workbook();ws=wb.active;ws.title='Chart Data';ws.append([self.x_name.get().strip() or xchoice]+[self.axis_label(v) for _,v in chosen])
-        converted=[convert_series(v['parsed'],v['detected_unit'],v['unit'].get()) for _,v in chosen]
-        for i,x in enumerate(xdata):ws.append([x]+[values[i] for values in converted])
-        chart=LineChart();chart.title=self.title_var.get().strip();chart.x_axis.title=self.x_name.get().strip() or xchoice
+        chosen,rows=self.plotting_data();wb=Workbook();ws=wb.active;ws.title='Chart Data';xname=self.x_name.get().strip() or self.x_axis.get();ws.append([xname]+[self.axis_label(v) for _,v in chosen])
+        for x,values,_idx in rows:ws.append([x]+values)
+        chart=LineChart();chart.title=self.title_var.get().strip();chart.x_axis.title=xname
         if chosen:chart.y_axis.title=self.axis_label(chosen[0][1])
-        data=Reference(ws,min_col=2,max_col=1+len(chosen),min_row=1,max_row=1+len(xdata));cats=Reference(ws,min_col=1,min_row=2,max_row=1+len(xdata));chart.add_data(data,titles_from_data=True);chart.set_categories(cats);chart.legend.position='b';chart.height=14;chart.width=26;ws.add_chart(chart,'E2');wb.save(path)
+        data=Reference(ws,min_col=2,max_col=1+len(chosen),min_row=1,max_row=1+len(rows));cats=Reference(ws,min_col=1,min_row=2,max_row=1+len(rows));chart.add_data(data,titles_from_data=True);chart.set_categories(cats);chart.legend.position='b';chart.height=14;chart.width=26;ws.add_chart(chart,'E2');wb.save(path)
 
     def export_chart(self):
         if not self.selected(): messagebox.showwarning('提示' if self.lang=='zh' else 'Notice','请至少选择一个数据系列。' if self.lang=='zh' else 'Select at least one series.',parent=self);return

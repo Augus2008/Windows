@@ -18,4 +18,11 @@ with tempfile.TemporaryDirectory() as d:
 with patch("chart_dialog.messagebox.askyesnocancel",return_value=True):dlg.request_close()
 assert app.chart_settings["x_name"]=="采样点"
 dlg2=ChartDialog(app,data,"zh","sample.trc",app.chart_settings);dlg2.update_idletasks();dlg2.update();assert dlg2.x_name.get()=="采样点"
-dlg2.destroy();app.destroy();print("CHART_GUI_TEST_OK")
+dlg2.destroy();print("CHART_GUI_TEST_OK")
+# Large export must contain only the actual representative points used by the chart.
+large=pd.DataFrame({"values":[f"{3500+i%700}mV" for i in range(80645)],"percent":[f"{i%101}%" for i in range(80645)]})
+dlg3=ChartDialog(app,large,"zh","large.trc");dlg3.update_idletasks();dlg3.update();chosen,rows=dlg3.plotting_data();assert 1<len(rows)<=5000
+with tempfile.TemporaryDirectory() as d:
+    out=Path(d)/"large-chart.xlsx";dlg3.export_excel(out);wb=load_workbook(out,read_only=False)
+    ws=wb["Chart Data"];assert ws.max_row==len(rows)+1 and len(ws._charts)==1
+dlg3.destroy();app.destroy();print("LARGE_CHART_EXCEL_TEST_OK",len(rows))
