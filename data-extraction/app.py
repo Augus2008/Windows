@@ -12,7 +12,7 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.11.3"
+APP_VERSION = "0.11.4"
 BUILD_DATE = "2026-08-11"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
@@ -28,6 +28,8 @@ class App(ctk.CTk):
         self.geometry("1360x820"); self.minsize(1080, 680)
         self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
         self._style(); self._ui(); self.apply_language()
+        self.bind("<Button-1>", self.close_language_menu_on_outside_click, add="+")
+        self.bind("<Escape>", lambda _e:self.close_language_menu(), add="+")
 
     def _style(self):
         s = ttk.Style(); s.theme_use("clam")
@@ -113,8 +115,15 @@ class App(ctk.CTk):
             self.language_option_buttons.append(button)
             button.pack(fill="x", padx=6, pady=(6,0) if code == "zh" else (2,6))
         popup.bind("<Escape>", lambda _e:self.close_language_menu())
-        popup.bind("<FocusOut>", lambda _e:self.after(80, self.close_language_menu))
-        popup.focus_force()
+
+
+    def close_language_menu_on_outside_click(self, event):
+        popup = self.language_popup
+        if popup is None or not popup.winfo_exists(): return
+        x, y = event.x_root, event.y_root
+        inside_popup = popup.winfo_rootx() <= x < popup.winfo_rootx()+popup.winfo_width() and popup.winfo_rooty() <= y < popup.winfo_rooty()+popup.winfo_height()
+        inside_button = self.language_btn.winfo_rootx() <= x < self.language_btn.winfo_rootx()+self.language_btn.winfo_width() and self.language_btn.winfo_rooty() <= y < self.language_btn.winfo_rooty()+self.language_btn.winfo_height()
+        if not inside_popup and not inside_button: self.close_language_menu()
 
     def select_language(self, choice):
         self.language_action(choice)
