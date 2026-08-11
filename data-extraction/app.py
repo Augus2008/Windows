@@ -12,8 +12,8 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.11.2"
-BUILD_DATE = "2026-08-10"
+APP_VERSION = "0.11.3"
+BUILD_DATE = "2026-08-11"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
 class App(ctk.CTk):
@@ -26,7 +26,7 @@ class App(ctk.CTk):
         super().__init__()
         self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1360x820"); self.minsize(1080, 680)
-        self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
+        self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
         self._style(); self._ui(); self.apply_language()
 
     def _style(self):
@@ -56,9 +56,7 @@ class App(ctk.CTk):
         head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
         self.status=ctk.CTkLabel(head,text="导入文件，自动提取 values 和 percent",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
         self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
-        self.language_popup=tk.Menu(self,tearoff=0,bg="#ffffff",fg="#334155",activebackground="#e2e8f0",activeforeground="#0f172a",relief="flat",bd=1)
-        self.language_popup.add_command(label="中文",command=lambda:self.language_action("中文"))
-        self.language_popup.add_command(label="English",command=lambda:self.language_action("English"))
+        self.language_popup = None
         main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
         box=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
         self.advanced_label=ctk.CTkLabel(box,text="高级筛选（可选）",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53")
@@ -92,7 +90,45 @@ class App(ctk.CTk):
         self.tree=ttk.Treeview(wrap,show="headings",selectmode="extended"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew"); self.tree.bind("<Control-c>",self.copy_selection); self.tree.bind("<Button-3>",self.popup_copy_menu)
 
     def show_language_menu(self):
-        self.language_popup.tk_popup(self.language_btn.winfo_rootx(), self.language_btn.winfo_rooty()-72)
+        if self.language_popup is not None and self.language_popup.winfo_exists():
+            self.close_language_menu()
+            return
+        self.update_idletasks()
+        width = self.language_btn.winfo_width()
+        height = 92
+        x = self.language_btn.winfo_rootx()
+        y = self.language_btn.winfo_rooty() - height - 6
+        popup = tk.Toplevel(self)
+        popup.overrideredirect(True)
+        popup.attributes("-topmost", True)
+        popup.configure(bg="#12314a")
+        popup.geometry(f"{width}x{height}+{x}+{y}")
+        self.language_popup = popup
+        self.language_option_buttons = []
+        panel = ctk.CTkFrame(popup, fg_color="#163b56", corner_radius=10, border_width=1, border_color="#315f7e")
+        panel.pack(fill="both", expand=True)
+        for code, label, choice in (("zh", "中文", "中文"), ("en", "English", "English")):
+            selected = self.lang == code
+            button = ctk.CTkButton(panel, text=("✓  " if selected else "    ") + label, height=38, corner_radius=7, anchor="w", fg_color="#2b6388" if selected else "transparent", hover_color="#285a7a", text_color="#ffffff", font=("Microsoft YaHei UI", 12, "bold" if selected else "normal"), command=lambda c=choice:self.select_language(c))
+            self.language_option_buttons.append(button)
+            button.pack(fill="x", padx=6, pady=(6,0) if code == "zh" else (2,6))
+        popup.bind("<Escape>", lambda _e:self.close_language_menu())
+        popup.bind("<FocusOut>", lambda _e:self.after(80, self.close_language_menu))
+        popup.focus_force()
+
+    def select_language(self, choice):
+        self.language_action(choice)
+        self.close_language_menu()
+
+    def close_language_menu(self):
+        popup = self.language_popup
+        if popup is not None:
+            try:
+                if popup.winfo_exists(): popup.destroy()
+            except tk.TclError:
+                pass
+        self.language_popup = None
+        self.language_option_buttons = []
 
 
     def import_file(self):

@@ -13,9 +13,15 @@ assert app.language_btn.cget("hover_color")==app.about_btn.cget("hover_color")
 assert int(app.language_btn.cget("height"))==int(app.about_btn.cget("height"))
 assert app.export_btn.cget("text_color")=="#ffffff"
 assert "bold" in str(app.export_btn.cget("font")).lower()
-assert app.language_popup.index("end")==1
-assert app.language_popup.entrycget(0,"label")=="中文"
-assert app.language_popup.entrycget(1,"label")=="English"
+assert app.language_popup is None
+app.show_language_menu();app.update_idletasks();app.update()
+assert app.language_popup is not None and app.language_popup.winfo_exists()
+language_options=app.language_option_buttons
+assert len(language_options)==2
+assert "✓" in language_options[0].cget("text") and "English" in language_options[1].cget("text")
+assert app.language_popup.winfo_width()==app.language_btn.winfo_width()
+assert app.language_popup.winfo_y()+app.language_popup.winfo_height()<=app.language_btn.winfo_rooty()
+app.close_language_menu();assert app.language_popup is None
 app.language_action("English");app.update_idletasks();app.update()
 assert app.language_btn.cget("text")==TEXT["en"]["language_menu"]
 assert app.status.cget("text")==TEXT["en"]["header_empty"]
