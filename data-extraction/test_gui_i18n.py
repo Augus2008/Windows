@@ -12,6 +12,7 @@ assert app.language_btn.cget("fg_color")==app.about_btn.cget("fg_color")
 assert app.language_btn.cget("hover_color")==app.about_btn.cget("hover_color")
 assert int(app.language_btn.cget("height"))==int(app.about_btn.cget("height"))
 assert app.export_btn.cget("text_color")=="#ffffff"
+assert app.chart_btn.cget("text")==TEXT["zh"]["chart_export"]
 assert "bold" in str(app.export_btn.cget("font")).lower()
 assert app.language_popup is None
 app.show_language_menu();app.update_idletasks();app.update()
@@ -24,6 +25,7 @@ assert app.language_popup.winfo_y()+app.language_popup.winfo_height()<=app.langu
 language_options[1].invoke();app.update_idletasks();app.update()
 assert app.language_popup is None and app.lang=="en"
 assert app.language_btn.cget("text")==TEXT["en"]["language_menu"]
+assert app.chart_btn.cget("text")==TEXT["en"]["chart_export"]
 assert app.status.cget("text")==TEXT["en"]["header_empty"]
 colors=[app.search_btn.cget("fg_color"),app.dedupe_btn.cget("fg_color"),app.reextract_btn.cget("fg_color"),app.restore_btn.cget("fg_color"),app.clear_all_btn.cget("fg_color"),app.colmenu.cget("fg_color")]
 assert len(colors)==len(set(colors)),colors

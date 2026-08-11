@@ -6,13 +6,14 @@ import pandas as pd
 import customtkinter as ctk
 from i18n import TEXT
 from i18n_runtime import tr, show_about, language_action, apply_language, refresh_localized_state
+from chart_dialog import open_chart_dialog
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.11.4"
+APP_VERSION = "0.12.0"
 BUILD_DATE = "2026-08-11"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
@@ -51,6 +52,8 @@ class App(ctk.CTk):
         self.fmt=ctk.CTkSegmentedButton(side,values=["Excel","CSV","TXT"]); self.fmt.set("Excel"); self.fmt.pack(fill="x",padx=22,pady=(8,10))
         self.export_btn=ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",text_color="#ffffff",font=("Microsoft YaHei UI",13,"bold"),command=self.export)
         self.export_btn.pack(fill="x",padx=22)
+        self.chart_btn=ctk.CTkButton(side,text="▥  生成图表并导出",height=42,fg_color="#0891b2",hover_color="#0e7490",text_color="#ffffff",font=("Microsoft YaHei UI",13,"bold"),command=self.open_chart)
+        self.chart_btn.pack(fill="x",padx=22,pady=(9,0))
         self.about_btn=ctk.CTkButton(side,text="关于",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_about)
         self.about_btn.pack(side="bottom",fill="x",padx=20,pady=(0,22))
         self.language_btn=ctk.CTkButton(side,text="语言",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_language_menu)
@@ -345,6 +348,9 @@ class App(ctk.CTk):
             if not any(v.get() for v in vs.values()):messagebox.showwarning(self.tr("info"),self.tr("at_least_one"));return
             self.visible={c:v.get() for c,v in vs.items()};self.refresh();w.destroy()
         ctk.CTkButton(w,text=self.tr("save_selection"),command=save,height=38).pack(pady=(5,20))
+    def open_chart(self):
+        open_chart_dialog(self, self.result.copy() if self.result is not None else None, self.lang, self.path.name if self.path else "")
+
     def export(self):
         if self.result is None:messagebox.showinfo(self.tr("info"),self.tr("export_first"));return
         f=self.fmt.get();ext={"Excel":".xlsx","CSV":".csv","TXT":".txt"}[f];p=filedialog.asksaveasfilename(title=self.tr("save_title"),defaultextension=ext,initialfile=self.tr("save_name")+ext,filetypes=[(f+" File" if self.lang=="en" else f+" 文件","*"+ext)])

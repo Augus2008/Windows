@@ -1,14 +1,14 @@
 # 数据提取工具
 
 [![Windows Build](https://github.com/Augus2008/Windows/actions/workflows/build-data-extraction.yml/badge.svg)](https://github.com/Augus2008/Windows/actions/workflows/build-data-extraction.yml)
-[![Release](https://img.shields.io/github/v/release/Augus2008/Windows?filter=data-extraction-v*&label=stable)](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.11.4)
+[![Release](https://img.shields.io/github/v/release/Augus2008/Windows?filter=data-extraction-v*&label=stable)](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.12.0)
 
 面向 Windows 的本地数据提取程序，重点用于从 LOG / TRC 中快速提取 `values` 与 `percent`。
 
 ## 下载
 
-当前稳定版：**v0.11.4**
-[前往 GitHub Release 下载 DataExtractionTool.exe](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.11.4)
+当前稳定版：**v0.12.0**
+[前往 GitHub Release 下载 DataExtractionTool.exe](https://github.com/Augus2008/Windows/releases/tag/data-extraction-v0.12.0)
 
 无需安装 Python。程序为单文件 EXE，首次启动可能需要数秒完成运行时解压。
 
@@ -27,6 +27,8 @@
 - 复制单元格、复制多行、选择导出列、去重。
 - 中文 / English 即时切换。
 - 清空全部数据后恢复初始状态。
+- 图表设置与实时预览：可独立或联合绘制 values / percent，自定义名称、单位、横轴与图表类型。
+- 图表内部自动拆分纯数值和单位，支持常见电压/电流单位换算，导出 PNG / PDF / SVG。
 - 全程本地处理，不主动上传数据。
 
 ## 文档

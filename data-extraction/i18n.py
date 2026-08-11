@@ -2,7 +2,7 @@ TEXT = {
 'zh': {
 'app_name':'数据提取工具','import_auto':'＋  导入并自动提取',
 'supported':'支持导入：Excel、CSV、TXT、LOG、TRC','source':'数据源 / 工作表',
-'source_empty':'导入后显示数据源','export_format':'导出格式','export':'⇩  导出当前结果',
+'source_empty':'导入后显示数据源','export_format':'导出格式','export':'⇩  导出当前结果','chart_export':'▥  生成图表并导出',
 'source_trc':'TRC · 全部记录','source_log':'LOG · 全部记录','source_csv':'CSV · 全部记录','source_txt':'TXT · 全部记录','lang_zh':'中文','lang_en':'English',
 'about':'关于','header_empty':'请先导入要处理的文件','header':'导入文件，自动提取 values 和 percent',
 'files':'支持 Excel、CSV、TXT、LOG 与 TRC 文件','language':'语言','language_menu':'语言','clear_all':'清空全部数据','confirm_clear':'确定要清空已导入文件和全部数据吗？','confirm':'确认',
@@ -28,7 +28,7 @@ TEXT = {
 'en': {
 'app_name':'Data Extraction Tool','import_auto':'+  Import & Auto Extract',
 'supported':'Import: Excel, CSV, TXT, LOG, TRC','source':'Data Source / Worksheet',
-'source_empty':'Import a file to show source','export_format':'Export Format','export':'Export Current Result',
+'source_empty':'Import a file to show source','export_format':'Export Format','export':'Export Current Result','chart_export':'▥  Create & Export Chart',
 'source_trc':'TRC · All Records','source_log':'LOG · All Records','source_csv':'CSV · All Records','source_txt':'TXT · All Records','lang_zh':'中文','lang_en':'English',
 'about':'About','header_empty':'Please import the file to process first','header':'Import a file to auto-extract values and percent',
 'files':'Supports Excel, CSV, TXT, LOG and TRC files','language':'Language','language_menu':'Language','clear_all':'Clear All Data','confirm_clear':'Clear the imported file and all data?','confirm':'Confirm',

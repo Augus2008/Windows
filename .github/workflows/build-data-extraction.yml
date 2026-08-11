@@ -24,10 +24,14 @@ jobs:
         run: python test_extraction.py
       - name: Run i18n resource tests
         run: python test_i18n.py
+      - name: Run chart parsing tests
+        run: python test_chart.py
       - name: Run bilingual GUI tests
         run: python test_gui_i18n.py
+      - name: Run chart GUI tests
+        run: python test_chart_gui.py
       - name: Compile-check Python sources
-        run: python -m py_compile app.py i18n.py i18n_runtime.py
+        run: python -m py_compile app.py chart_dialog.py i18n.py i18n_runtime.py
       - name: Build standalone EXE
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name DataExtractionTool app.py
       - name: Smoke-test GUI startup
