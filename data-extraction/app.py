@@ -13,7 +13,7 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.12.0"
+APP_VERSION = "0.12.1"
 BUILD_DATE = "2026-08-11"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
@@ -27,7 +27,7 @@ class App(ctk.CTk):
         super().__init__()
         self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1360x820"); self.minsize(1080, 680)
-        self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
+        self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.chart_settings = None; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
         self._style(); self._ui(); self.apply_language()
         self.bind("<Button-1>", self.close_language_menu_on_outside_click, add="+")
         self.bind("<Escape>", lambda _e:self.close_language_menu(), add="+")
@@ -349,7 +349,7 @@ class App(ctk.CTk):
             self.visible={c:v.get() for c,v in vs.items()};self.refresh();w.destroy()
         ctk.CTkButton(w,text=self.tr("save_selection"),command=save,height=38).pack(pady=(5,20))
     def open_chart(self):
-        open_chart_dialog(self, self.result.copy() if self.result is not None else None, self.lang, self.path.name if self.path else "")
+        open_chart_dialog(self, self.result.copy() if self.result is not None else None, self.lang, self.path.name if self.path else "", self.chart_settings)
 
     def export(self):
         if self.result is None:messagebox.showinfo(self.tr("info"),self.tr("export_first"));return

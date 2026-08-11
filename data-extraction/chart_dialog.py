@@ -5,6 +5,8 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.chart import LineChart, Reference
 from matplotlib.figure import Figure
 from matplotlib import rcParams
 rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "Arial Unicode MS", "DejaVu Sans"]
@@ -38,14 +40,14 @@ def convert_series(parsed, detected_unit, target_unit):
     return converted
 
 class ChartDialog(ctk.CTkToplevel):
-    def __init__(self, parent, data, lang='zh', source_name=''):
+    def __init__(self, parent, data, lang='zh', source_name='', settings=None):
         super().__init__(parent)
-        self.data = data.copy(); self.lang = lang; self.source_name = source_name
+        self.data = data.copy(); self.lang = lang; self.source_name = source_name; self.parent_app = parent; self.initial_settings = settings or {}
         self.title('图表设置与预览' if lang=='zh' else 'Chart Settings & Preview')
         self.geometry('1180x760'); self.minsize(980,650); self.transient(parent)
-        self.protocol('WM_DELETE_WINDOW', self.destroy)
-        self.series = {}
-        self._build(); self.after(120, self.refresh_preview)
+        self.protocol('WM_DELETE_WINDOW', self.request_close)
+        self.series = {}; self.dirty = False
+        self._build(); self.apply_settings(self.initial_settings); self.snapshot = self.collect_settings(); self.after(120, self.refresh_preview)
 
     def _build(self):
         self.grid_columnconfigure(1,weight=1); self.grid_rowconfigure(0,weight=1)
@@ -56,7 +58,8 @@ class ChartDialog(ctk.CTkToplevel):
         self.title_var=tk.StringVar(value=title_default);self._entry(left,'图表标题' if zh else 'Chart title',self.title_var)
         self.chart_type=tk.StringVar(value='折线图' if zh else 'Line');self._option(left,'图表类型' if zh else 'Chart type',self.chart_type,['折线图','散点图','折线＋数据点'] if zh else ['Line','Scatter','Line + markers'])
         xvalues=['记录序号' if zh else 'Record index']+[str(c) for c in self.data.columns if c not in ('values','percent')]
-        self.x_axis=tk.StringVar(value=xvalues[0]);self._option(left,'横轴' if zh else 'X axis',self.x_axis,xvalues)
+        self.x_axis=tk.StringVar(value=xvalues[0]);self._option(left,'横轴数据来源' if zh else 'X-axis data source',self.x_axis,xvalues)
+        self.x_name=tk.StringVar(value=xvalues[0]);self._entry(left,'横轴名称' if zh else 'X-axis name',self.x_name)
         for col,default_name in [('values','数值' if zh else 'Values'),('percent','百分比' if zh else 'Percent')]:
             if col not in self.data.columns: continue
             parsed,unit=analyze_series(self.data[col]);enabled=tk.BooleanVar(value=True);name=tk.StringVar(value=default_name);unit_var=tk.StringVar(value=unit)
@@ -72,7 +75,7 @@ class ChartDialog(ctk.CTkToplevel):
         actions=ctk.CTkFrame(right,fg_color='transparent');actions.grid(row=2,column=0,sticky='e',padx=14,pady=(0,12))
         ctk.CTkButton(actions,text='刷新预览' if zh else 'Refresh',command=self.refresh_preview,fg_color='#0f766e').pack(side='left',padx=5)
         ctk.CTkButton(actions,text='导出图表' if zh else 'Export Chart',command=self.export_chart,fg_color='#7c3aed').pack(side='left',padx=5)
-        ctk.CTkButton(actions,text='关闭' if zh else 'Close',command=self.destroy,fg_color='#64748b').pack(side='left',padx=5)
+        ctk.CTkButton(actions,text='关闭' if zh else 'Close',command=self.request_close,fg_color='#64748b').pack(side='left',padx=5)
 
     def _entry(self,parent,label,var):
         ctk.CTkLabel(parent,text=label,text_color='#475569').pack(anchor='w',padx=10,pady=(5,2));e=ctk.CTkEntry(parent,textvariable=var);e.pack(fill='x',padx=10,pady=(0,7));e.bind('<KeyRelease>',lambda _e:self.after(120,self.refresh_preview));return e
@@ -97,22 +100,54 @@ class ChartDialog(ctk.CTkToplevel):
                     line,=target.plot(xs,ys,color=item['color'],linewidth=1.8,marker=marker,markersize=4,label=item['name'].get())
                 lines.append(line)
             target.set_ylabel(self.axis_label(item),color=item['color'],fontproperties=None);target.tick_params(axis='y',labelcolor=item['color'])
-        ax.set_xlabel(xchoice);ax.set_title(self.title_var.get().strip());ax.grid(self.grid_var.get(),alpha=.25)
-        if self.legend_var.get() and lines: ax.legend(lines,[x.get_label() for x in lines],loc='best')
-        self.figure.tight_layout();return len(valid),len(self.data)-len(valid)
+        ax.set_xlabel(self.x_name.get().strip() or xchoice);ax.set_title(self.title_var.get().strip());ax.grid(self.grid_var.get(),alpha=.25)
+        if self.legend_var.get() and lines: ax.legend(lines,[x.get_label() for x in lines],loc='upper center',bbox_to_anchor=(0.5,-0.13),ncol=max(1,len(lines)),frameon=False)
+        self.figure.tight_layout(rect=[0,0.12,1,1]);return len(valid),len(self.data)-len(valid)
     def refresh_preview(self):
         try:
             valid,skipped=self.draw();self.canvas.draw_idle();self.stats.configure(text=(f'当前结果：{len(self.data):,} 条  ·  有效绘图：{valid:,} 条  ·  跳过：{skipped:,} 条' if self.lang=='zh' else f'Rows: {len(self.data):,}  ·  Valid: {valid:,}  ·  Skipped: {skipped:,}'))
         except (tk.TclError,ValueError) as e:
             if self.winfo_exists(): self.stats.configure(text=str(e))
+    def collect_settings(self):
+        return {'title':self.title_var.get(),'chart_type':self.chart_type.get(),'x_axis':self.x_axis.get(),'x_name':self.x_name.get(),'grid':self.grid_var.get(),'legend':self.legend_var.get(),'series':{k:{'enabled':v['enabled'].get(),'name':v['name'].get(),'unit':v['unit'].get()} for k,v in self.series.items()}}
+    def apply_settings(self, settings):
+        if not settings: return
+        for key,var in (('title',self.title_var),('chart_type',self.chart_type),('x_axis',self.x_axis),('x_name',self.x_name)):
+            if key in settings: var.set(settings[key])
+        if 'grid' in settings:self.grid_var.set(settings['grid'])
+        if 'legend' in settings:self.legend_var.set(settings['legend'])
+        for key,values in settings.get('series',{}).items():
+            if key in self.series:
+                for field in ('enabled','name','unit'):
+                    if field in values:self.series[key][field].set(values[field])
+    def request_close(self):
+        current=self.collect_settings()
+        if current != self.snapshot:
+            answer=messagebox.askyesnocancel('保存图表设置' if self.lang=='zh' else 'Save Chart Settings','是否保存当前修改后关闭？' if self.lang=='zh' else 'Save current changes before closing?',parent=self)
+            if answer is None:return
+            if answer:self.parent_app.chart_settings=current
+        self.destroy()
+
+    def export_excel(self, path):
+        chosen=self.selected();record_label='记录序号' if self.lang=='zh' else 'Record index';xchoice=self.x_axis.get();xdata=list(range(1,len(self.data)+1)) if xchoice==record_label or xchoice not in self.data.columns else list(self.data[xchoice])
+        wb=Workbook();ws=wb.active;ws.title='Chart Data';ws.append([self.x_name.get().strip() or xchoice]+[self.axis_label(v) for _,v in chosen])
+        converted=[convert_series(v['parsed'],v['detected_unit'],v['unit'].get()) for _,v in chosen]
+        for i,x in enumerate(xdata):ws.append([x]+[values[i] for values in converted])
+        chart=LineChart();chart.title=self.title_var.get().strip();chart.x_axis.title=self.x_name.get().strip() or xchoice
+        if chosen:chart.y_axis.title=self.axis_label(chosen[0][1])
+        data=Reference(ws,min_col=2,max_col=1+len(chosen),min_row=1,max_row=1+len(xdata));cats=Reference(ws,min_col=1,min_row=2,max_row=1+len(xdata));chart.add_data(data,titles_from_data=True);chart.set_categories(cats);chart.legend.position='b';chart.height=14;chart.width=26;ws.add_chart(chart,'E2');wb.save(path)
+
     def export_chart(self):
         if not self.selected(): messagebox.showwarning('提示' if self.lang=='zh' else 'Notice','请至少选择一个数据系列。' if self.lang=='zh' else 'Select at least one series.',parent=self);return
-        p=filedialog.asksaveasfilename(parent=self,title='导出图表' if self.lang=='zh' else 'Export Chart',defaultextension='.png',initialfile=(Path(self.source_name).stem if self.source_name else 'chart')+'_chart.png',filetypes=[('PNG','*.png'),('PDF','*.pdf'),('SVG','*.svg')])
+        p=filedialog.asksaveasfilename(parent=self,title='导出图表' if self.lang=='zh' else 'Export Chart',defaultextension='.png',initialfile=(Path(self.source_name).stem if self.source_name else 'chart')+'_chart.png',filetypes=[('PNG','*.png'),('Excel','*.xlsx'),('PDF','*.pdf'),('SVG','*.svg')])
         if not p:return
-        try:self.draw();self.figure.savefig(p,dpi=200,bbox_inches='tight');messagebox.showinfo('导出成功' if self.lang=='zh' else 'Export Complete',f'图表已保存：\n{p}' if self.lang=='zh' else f'Chart saved:\n{p}',parent=self)
+        try:
+            if Path(p).suffix.lower()=='.xlsx':self.export_excel(p)
+            else:self.draw();self.figure.savefig(p,dpi=200,bbox_inches='tight')
+            messagebox.showinfo('导出成功' if self.lang=='zh' else 'Export Complete',f'图表已保存：\n{p}' if self.lang=='zh' else f'Chart saved:\n{p}',parent=self)
         except Exception as e:messagebox.showerror('导出失败' if self.lang=='zh' else 'Export Failed',str(e),parent=self)
 
-def open_chart_dialog(parent,data,lang='zh',source_name=''):
+def open_chart_dialog(parent,data,lang='zh',source_name='',settings=None):
     if data is None or data.empty or not any(c in data.columns for c in ('values','percent')):
         messagebox.showinfo('提示' if lang=='zh' else 'Information','请先导入并自动提取 values 和 percent 数据。' if lang=='zh' else 'Import and auto-extract values and percent data first.',parent=parent);return None
-    return ChartDialog(parent,data,lang,source_name)
+    return ChartDialog(parent,data,lang,source_name,settings)
