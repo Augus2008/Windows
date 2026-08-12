@@ -1,12 +1,13 @@
 import re
 from collections import Counter
 from pathlib import Path
+import tempfile
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
 import pandas as pd
 from openpyxl import Workbook
-from openpyxl.chart import LineChart, Reference
+from openpyxl.drawing.image import Image as ExcelImage
 from matplotlib.figure import Figure
 from matplotlib import rcParams
 rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "Arial Unicode MS", "DejaVu Sans"]
@@ -156,11 +157,14 @@ class ChartDialog(ctk.CTkToplevel):
         self.destroy()
 
     def export_excel(self, path):
-        chosen,rows=self.plotting_data();wb=Workbook();ws=wb.active;ws.title='Chart Data';xname=self.x_name.get().strip() or self.x_axis.get();ws.append([xname]+[self.axis_label(v) for _,v in chosen])
-        for x,values,_idx in rows:ws.append([x]+values)
-        chart=LineChart();chart.title=self.title_var.get().strip();chart.x_axis.title=xname
-        if chosen:chart.y_axis.title=self.axis_label(chosen[0][1])
-        data=Reference(ws,min_col=2,max_col=1+len(chosen),min_row=1,max_row=1+len(rows));cats=Reference(ws,min_col=1,min_row=2,max_row=1+len(rows));chart.add_data(data,titles_from_data=True);chart.set_categories(cats);chart.legend.position='b';chart.height=14;chart.width=26;ws.add_chart(chart,'E2');wb.save(path)
+        chosen,rows=self.plotting_data();wb=Workbook();chart_ws=wb.active;chart_ws.title='Chart Preview';data_ws=wb.create_sheet('Chart Data');xname=self.x_name.get().strip() or self.x_axis.get();data_ws.append([xname]+[self.axis_label(v) for _,v in chosen])
+        for x,values,_idx in rows:data_ws.append([x]+values)
+        data_ws.freeze_panes='A2';data_ws.auto_filter.ref=data_ws.dimensions
+        chart_ws['A1']=self.title_var.get().strip();chart_ws['A1'].font=chart_ws['A1'].font.copy(bold=True,size=16)
+        self.draw()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            image_path=Path(temp_dir)/'chart.png';self.figure.savefig(image_path,dpi=180,bbox_inches='tight',facecolor='white')
+            image=ExcelImage(str(image_path));image.width=1100;image.height=650;chart_ws.add_image(image,'A3');wb.save(path)
 
     def export_chart(self):
         if not self.selected(): messagebox.showwarning('提示' if self.lang=='zh' else 'Notice','请至少选择一个数据系列。' if self.lang=='zh' else 'Select at least one series.',parent=self);return

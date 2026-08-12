@@ -1,4 +1,5 @@
 import tempfile
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 import pandas as pd
@@ -13,7 +14,10 @@ dlg.x_name.set("采样点");valid,skipped=dlg.draw();assert valid==3 and skipped
 legend=dlg.figure.axes[0].get_legend();assert legend is not None and legend._loc==9
 with tempfile.TemporaryDirectory() as d:
     out=Path(d)/"chart.xlsx";dlg.export_excel(out);wb=load_workbook(out)
-    ws=wb["Chart Data"];assert ws["A1"].value=="采样点" and len(ws._charts)==1 and ws.max_row==4
+    ws=wb["Chart Data"];preview=wb["Chart Preview"];assert ws["A1"].value=="采样点" and ws.max_row==4
+    assert len(preview._images)==1 and not preview._charts and not ws._charts
+    with zipfile.ZipFile(out) as archive:
+        names=archive.namelist();assert any(n.startswith("xl/media/") for n in names) and not any(n.startswith("xl/charts/") for n in names)
 # Saving modified settings must persist them on the parent app.
 with patch("chart_dialog.messagebox.askyesnocancel",return_value=True):dlg.request_close()
 assert app.chart_settings["x_name"]=="采样点"
@@ -24,5 +28,8 @@ large=pd.DataFrame({"values":[f"{3500+i%700}mV" for i in range(80645)],"percent"
 dlg3=ChartDialog(app,large,"zh","large.trc");dlg3.update_idletasks();dlg3.update();chosen,rows=dlg3.plotting_data();assert 1<len(rows)<=5000
 with tempfile.TemporaryDirectory() as d:
     out=Path(d)/"large-chart.xlsx";dlg3.export_excel(out);wb=load_workbook(out,read_only=False)
-    ws=wb["Chart Data"];assert ws.max_row==len(rows)+1 and len(ws._charts)==1
+    ws=wb["Chart Data"];preview=wb["Chart Preview"];assert ws.max_row==len(rows)+1
+    assert len(preview._images)==1 and not preview._charts and not ws._charts
+    with zipfile.ZipFile(out) as archive:
+        names=archive.namelist();assert any(n.startswith("xl/media/") for n in names) and not any(n.startswith("xl/charts/") for n in names)
 dlg3.destroy();app.destroy();print("LARGE_CHART_EXCEL_TEST_OK",len(rows))
