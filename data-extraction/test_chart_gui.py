@@ -12,6 +12,7 @@ dlg=ChartDialog(app,data,"zh","sample.trc");dlg.update_idletasks();dlg.update()
 assert set(dlg.series)=={"values","percent"} and dlg.axis_label(dlg.series["values"])=="数值（mV）"
 dlg.x_name.set("采样点");valid,skipped=dlg.draw();assert valid==3 and skipped==0
 legend=dlg.figure.axes[0].get_legend();assert legend is not None and legend._loc==9
+grid_lines=dlg.figure.axes[0].get_xgridlines();assert grid_lines and grid_lines[0].get_color()=="#94a3b8" and abs(grid_lines[0].get_alpha()-.42)<1e-9
 with tempfile.TemporaryDirectory() as d:
     out=Path(d)/"chart.xlsx";dlg.export_excel(out);wb=load_workbook(out)
     ws=wb["Chart Data"];preview=wb["Chart Preview"];assert ws["A1"].value=="采样点" and ws.max_row==4

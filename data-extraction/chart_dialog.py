@@ -128,7 +128,7 @@ class ChartDialog(ctk.CTkToplevel):
                     line,=target.plot(xs,ys,color=item['color'],linewidth=1.8,marker=marker,markersize=4,label=item['name'].get())
                 lines.append(line)
             target.set_ylabel(self.axis_label(item),color=item['color']);target.tick_params(axis='y',labelcolor=item['color'])
-        xchoice=self.x_axis.get();ax.set_xlabel(self.x_name.get().strip() or xchoice);ax.set_title(self.title_var.get().strip());ax.grid(self.grid_var.get(),alpha=.25)
+        xchoice=self.x_axis.get();ax.set_xlabel(self.x_name.get().strip() or xchoice);ax.set_title(self.title_var.get().strip());ax.grid(self.grid_var.get(),color='#94a3b8',alpha=.42,linewidth=.75)
         if self.legend_var.get() and lines:ax.legend(lines,[x.get_label() for x in lines],loc='upper center',bbox_to_anchor=(0.5,-0.13),ncol=max(1,len(lines)),frameon=False)
         self.figure.tight_layout(rect=[0,0.12,1,1]);return len(rows),len(self.data)-len(rows)
     def refresh_preview(self):
