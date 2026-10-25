@@ -51,7 +51,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DataExtractionTool-Windows-${{ github.ref_name }}
+          name: DataExtractionTool-Windows-${{ github.run_number }}
           path: |
             data-extraction/dist/DataExtractionTool.exe
             data-extraction/dist/DataExtractionTool.exe.sha256
