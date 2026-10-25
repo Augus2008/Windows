@@ -6,3 +6,6 @@ build/
 dist/
 *.spec
 output/
+
+# Synthetic regression fixture, never user data
+!testdata/two-sheets.xls

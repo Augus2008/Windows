@@ -46,6 +46,10 @@ def apply_language(self):
 
 def refresh_localized_state(self):
     t = TEXT[self.lang]
+    if len(self.paths) > 1:
+        self.refresh_batch_state()
+        return
+    self.sheet.configure(state="readonly")
     if self.path is None:
         self.file.configure(text=t["supported"])
         self.sheet.configure(values=[t["source_empty"]])

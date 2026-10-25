@@ -4,13 +4,13 @@ cd /d "%~dp0"
 
 py -3.12 -m pip install --upgrade pip
 py -3.12 -m pip install -r requirements.txt pyinstaller
-py -3.12 test_extraction.py
-py -3.12 test_i18n.py
-py -3.12 test_gui_i18n.py
-if errorlevel 1 (
-  echo Tests failed. Build cancelled.
-  pause
-  exit /b 1
+for %%T in (test_extraction.py test_i18n.py test_chart.py test_gui_i18n.py test_chart_gui.py test_batch.py) do (
+  py -3.12 %%T
+  if errorlevel 1 (
+    echo Tests failed. Build cancelled.
+    pause
+    exit /b 1
+  )
 )
 
 py -3.12 -m PyInstaller --noconfirm --clean --onefile --windowed --name DataExtractionTool app.py

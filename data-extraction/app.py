@@ -7,17 +7,19 @@ import customtkinter as ctk
 from i18n import TEXT
 from i18n_runtime import tr, show_about, language_action, apply_language, refresh_localized_state
 from chart_dialog import open_chart_dialog
+from batch_ui import BatchImportMixin
+from batch_io import enrich_fields
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.12.4"
-BUILD_DATE = "2026-08-11"
+APP_VERSION = "0.13.0"
+BUILD_DATE = "2026-10-25"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
-class App(ctk.CTk):
+class App(BatchImportMixin, ctk.CTk):
     tr = tr
     show_about = show_about
     language_action = language_action
@@ -27,7 +29,7 @@ class App(ctk.CTk):
         super().__init__()
         self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1360x820"); self.minsize(1080, 680)
-        self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.chart_settings = None; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
+        self.paths = []; self.source_file_column = None; self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.chart_settings = None; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
         self._style(); self._ui(); self.apply_language()
         self.bind("<Button-1>", self.close_language_menu_on_outside_click, add="+")
         self.bind("<Escape>", lambda _e:self.close_language_menu(), add="+")
@@ -143,21 +145,6 @@ class App(ctk.CTk):
         self.language_option_buttons = []
 
 
-    def import_file(self):
-        p=filedialog.askopenfilename(title=self.tr("select_file"),filetypes=[(self.tr("data_files"),"*.xlsx *.xls *.csv *.txt *.log *.trc"),(self.tr("all_files"),"*.*")])
-        if not p:return
-        self.path=Path(p)
-        try:
-            if self.path.suffix.lower() in (".xlsx",".xls"):
-                names=pd.ExcelFile(p).sheet_names; self.sheet.configure(values=names,state="readonly"); self.sheet.set(names[0]); self.load_sheet(names[0])
-            elif self.path.suffix.lower()==".trc":
-                value=self.tr("source_trc"); self.sheet.configure(values=[value],state="readonly"); self.sheet.set(value); self.load_trc(p)
-            elif self.path.suffix.lower()==".log":
-                value=self.tr("source_log"); self.sheet.configure(values=[value],state="readonly"); self.sheet.set(value); self.load_log(p)
-            else:
-                label=self.tr("source_csv") if self.path.suffix.lower()==".csv" else self.tr("source_txt"); self.sheet.configure(values=[label],state="readonly"); self.sheet.set(label); self.load_text(p)
-            self.file.configure(text=self.tr("imported",name=self.path.name))
-        except Exception as e: messagebox.showerror(self.tr("import_failed"),str(e))
     def load_text(self,p):
         lines=None
         for enc in ("utf-8-sig","utf-8","gb18030","gbk","latin1"):
@@ -167,6 +154,17 @@ class App(ctk.CTk):
             except UnicodeDecodeError:continue
         if lines is None:raise ValueError("无法识别文件编码")
         sample="\n".join(lines[:30])
+        if Path(p).suffix.lower() == ".csv":
+            try:
+                separator=csv.Sniffer().sniff(sample,delimiters=",\t;|").delimiter
+            except csv.Error:
+                separator=","  # A one-column CSV is still a table, not raw text.
+            try:
+                self.source=pd.read_csv(p,encoding=enc,sep=separator,engine="python")
+            except pd.errors.EmptyDataError:
+                self.source=pd.DataFrame()
+            self.loaded()
+            return
         try:
             dialect=csv.Sniffer().sniff(sample,delimiters=",\t;|")
             self.source=pd.read_csv(p,encoding=enc,sep=dialect.delimiter,engine="python")
@@ -217,18 +215,18 @@ class App(ctk.CTk):
             module="";mm=re.match(r"([^ ]+\.(?:c|cpp|h):\d+):?",msg)
             if mm:module=mm.group(1)
             rows.append({"行号":no,"日期时间":dt.strip(),"运行时间(秒)":runtime,"级别":level,"模块/来源":module,"日志内容":msg,"原始行":line})
-        self.source=pd.DataFrame(rows)
+        self.source=pd.DataFrame(rows, columns=["行号","日期时间","运行时间(秒)","级别","模块/来源","日志内容","原始行"])
         for key in ("status","values","percent"):
             self.source[key]=self.source["日志内容"].str.extract(r"(?i)(?<![A-Za-z0-9_])"+key+r"\s*:\s*([^\s,;]+)",expand=False).fillna("")
         self.loaded()
 
     def change_sheet(self,name):
-        if self.path and self.path.suffix.lower() in (".xlsx",".xls"):self.load_sheet(name)
+        if len(self.paths) <= 1 and self.path and self.path.suffix.lower() in (".xlsx",".xls"):self.load_sheet(name)
     def load_sheet(self,name): self.source=pd.read_excel(self.path,sheet_name=name); self.loaded()
     def loaded(self):
         self.source.columns=[str(x) for x in self.source.columns]; self.result=self.source.copy(); self.visible={x:True for x in self.source.columns}; self.clear_conditions(); extracted=self.extract_primary(silent=True); self.meta.configure(text=self.tr("summary",name=self.path.name,source=len(self.source),result=len(self.result))); (not extracted) and (self.refresh() or self.status.configure(text=self.tr("auto_none")))
     def add_condition(self):
-        if self.source is None: messagebox.showinfo(self.tr("info"),self.tr("no_file")); return
+        if self.source is None or len(self.source.columns)==0: messagebox.showinfo(self.tr("info"),self.tr("no_file")); return
         r=ctk.CTkFrame(self.condbox,fg_color="#f4f7fb",corner_radius=8);r.pack(fill="x",pady=4)
         col=ctk.CTkComboBox(r,values=list(self.source.columns),width=190);col.set(str(self.source.columns[0]));col.pack(side="left",padx=(8,5),pady=7)
         op=ctk.CTkComboBox(r,values=TEXT[self.lang]["ops"],width=150);op.set(TEXT[self.lang]["ops"][0]);op.pack(side="left",padx=5,pady=7)
@@ -266,17 +264,14 @@ class App(ctk.CTk):
         except Exception as e:messagebox.showerror(self.tr("error"),str(e))
     def extract_primary(self,silent=False):
         if self.source is None:return False
-        work=self.source.copy()
-        if not {"values","percent"}.issubset(work.columns):
-            text_col=next((c for c in ("日志内容","文本内容","原始行") if c in work.columns),None)
-            if text_col:
-                for key in ("values","percent"):work[key]=work[text_col].astype(str).str.extract(r"(?i)(?<![A-Za-z0-9_])"+key+r"\s*[:=]\s*([^\s,;]+)",expand=False).fillna("")
+        work=enrich_fields(self.source)
         if not {"values","percent"}.issubset(work.columns):
             if not silent:messagebox.showinfo(self.tr("info"),self.tr("no_fields"))
             return False
-        mask=work["values"].astype(str).str.strip().ne("") & work["percent"].astype(str).str.strip().ne("")
-        self.result=work.loc[mask,["values","percent"]].copy()
-        self.visible={"values":True,"percent":True};self.refresh()
+        mask=work["values"].fillna("").astype(str).str.strip().ne("") & work["percent"].fillna("").astype(str).str.strip().ne("")
+        columns=([self.source_file_column] if self.source_file_column in work.columns else []) + ["values","percent"]
+        self.result=work.loc[mask,columns].copy()
+        self.visible={c:True for c in columns};self.refresh()
         self.status.configure(text=self.tr("auto_ok",n=len(self.result)))
         if not silent and self.result.empty:messagebox.showinfo(self.tr("info"),self.tr("no_records"))
         return not self.result.empty
@@ -292,6 +287,9 @@ class App(ctk.CTk):
             return
         if confirm and not messagebox.askyesno(self.tr("confirm"), self.tr("confirm_clear")):
             return
+        self.paths=[]
+        self.source_file_column=None
+        self.chart_settings=None
         self.path=None
         self.source=None
         self.result=None
@@ -309,11 +307,13 @@ class App(ctk.CTk):
     def data(self):return self.result[[c for c in self.result.columns if self.visible.get(c,True)]] if self.result is not None else pd.DataFrame()
     def refresh(self):
         if self.result is None:return
-        d=self.data();cols=list(d.columns);self.tree.delete(*self.tree.get_children());self.tree["columns"]=cols
-        for c in cols:
+        if len(self.paths) > 1:
+            self.meta.configure(text=self.tr("batch_summary", n=len(self.paths), source=len(self.source), result=len(self.result)))
+        d=self.data();cols=list(d.columns);self.tree.delete(*self.tree.get_children());ids=[f"data_col_{i}" for i in range(len(cols))];self.tree["columns"]=ids
+        for c,column_id in zip(cols,ids):
             anchor = "w" if c in LEFT_ALIGNED_COLUMNS else "center"
-            self.tree.heading(c,text=c,anchor="center")
-            self.tree.column(c,width=max(120,min(260,len(c)*16+80)),anchor=anchor)
+            self.tree.heading(column_id,text=c,anchor="center")
+            self.tree.column(column_id,width=max(120,min(260,len(c)*16+80)),anchor=anchor)
         for _,r in d.head(PREVIEW_ROWS).iterrows():self.tree.insert("","end",values=["" if pd.isna(x) else str(x)[:500] for x in r])
         self.rows.configure(text=self.tr("rows",n=len(d))+(self.tr("preview_limit") if len(d)>PREVIEW_ROWS else ""))
     def column_action(self,choice):
@@ -349,7 +349,7 @@ class App(ctk.CTk):
             self.visible={c:v.get() for c,v in vs.items()};self.refresh();w.destroy()
         ctk.CTkButton(w,text=self.tr("save_selection"),command=save,height=38).pack(pady=(5,20))
     def open_chart(self):
-        open_chart_dialog(self, self.result.copy() if self.result is not None else None, self.lang, self.path.name if self.path else "", self.chart_settings)
+        open_chart_dialog(self, self.result.copy() if self.result is not None else None, self.lang, self.batch_label() if len(self.paths) > 1 else (self.path.name if self.path else ""), self.chart_settings)
 
     def export(self):
         if self.result is None:messagebox.showinfo(self.tr("info"),self.tr("export_first"));return
