@@ -25,7 +25,8 @@ class BatchTests(unittest.TestCase):
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        # Windows TEMP may use an 8.3 short name; match loader canonicalization.
+        self.root = Path(self.temp.name).resolve()
         self.app.clear_all_data(confirm=False)
         self.app.lang = 'zh'
         self.app.apply_language()
