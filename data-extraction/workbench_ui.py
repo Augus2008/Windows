@@ -103,7 +103,7 @@ class WorkbenchMixin:
         box.grid(row=3,column=0,sticky='ew',pady=(8,0)); box.grid_columnconfigure(0,weight=1)
         self.advanced_label=self.label(box,bold=True)
         self.advanced_label.grid(row=0,column=0,sticky='w',padx=12,pady=4)
-        self.logic=ctk.CTkSegmentedButton(box,values=['全部条件 AND','任一条件 OR'],height=28,selected_color='#DBEAFE',selected_hover_color='#BFDBFE',text_color=INK,unselected_color=NEUTRAL)
+        self.logic=ctk.CTkSegmentedButton(box,values=['全部条件 AND','任一条件 OR'],height=28,selected_color='#DBEAFE',selected_hover_color='#BFDBFE',text_color=INK,unselected_color=NEUTRAL,command=self.refresh_pending)
         self.logic.set('全部条件 AND'); self.logic.grid(row=0,column=1,padx=12,pady=4)
         viewport=ctk.CTkFrame(box,fg_color='transparent',height=64)
         viewport.grid(row=1,column=0,columnspan=2,sticky='ew',padx=6); viewport.grid_propagate(False); viewport.pack_propagate(False)

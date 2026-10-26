@@ -16,7 +16,7 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.15.0"
+APP_VERSION = "0.15.1"
 BUILD_DATE = "2026-10-26"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
@@ -172,8 +172,8 @@ class App(WorkbenchMixin, BatchImportMixin, ctk.CTk):
         if self.source is None or len(self.source.columns)==0: messagebox.showinfo(self.tr("info"),self.tr("no_file")); return
         self.show_filter_panel(True)
         r=ctk.CTkFrame(self.condbox,fg_color="#f4f7fb",corner_radius=8);r.pack(fill="x",pady=4)
-        col=ctk.CTkComboBox(r,values=list(self.source.columns),width=190);col.set(str(self.source.columns[0]));col.pack(side="left",padx=(8,5),pady=7)
-        op=ctk.CTkComboBox(r,values=TEXT[self.lang]["ops"],width=150);op.set(TEXT[self.lang]["ops"][0]);op.pack(side="left",padx=5,pady=7)
+        col=ctk.CTkComboBox(r,values=list(self.source.columns),width=190,command=self.refresh_pending);col.set(str(self.source.columns[0]));col.pack(side="left",padx=(8,5),pady=7)
+        op=ctk.CTkComboBox(r,values=TEXT[self.lang]["ops"],width=150,command=self.refresh_pending);op.set(TEXT[self.lang]["ops"][0]);op.pack(side="left",padx=5,pady=7)
         val=ctk.CTkEntry(r,placeholder_text=self.tr("condition_value"),height=31);val.pack(side="left",fill="x",expand=True,padx=5,pady=7)
         ctk.CTkButton(r,text="×",width=32,height=31,fg_color="#EDF1F7",text_color="#B42332",hover_color="#DFE6F0",command=lambda:self.remove_condition(r)).pack(side="right",padx=(5,8),pady=7);self.conditions.append((r,col,op,val))
     def remove_condition(self,r):self.conditions=[x for x in self.conditions if x[0]!=r];r.destroy()

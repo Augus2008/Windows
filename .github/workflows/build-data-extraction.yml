@@ -36,8 +36,10 @@ jobs:
         run: python -m unittest -v test_audit test_verified_export
       - name: Run workbench UI tests
         run: python -m unittest -v test_workbench_ui
+      - name: Run native filter selection event tests
+        run: python -m unittest -v test_filter_events
       - name: Compile-check Python sources
-        run: python -m py_compile app.py chart_dialog.py i18n.py i18n_runtime.py batch_io.py batch_ui.py test_batch.py audit_ledger.py audit_ui.py verified_export.py test_audit.py test_verified_export.py workbench_ui.py test_workbench_ui.py
+        run: python -m py_compile app.py chart_dialog.py i18n.py i18n_runtime.py batch_io.py batch_ui.py test_batch.py audit_ledger.py audit_ui.py verified_export.py test_audit.py test_verified_export.py workbench_ui.py test_workbench_ui.py test_filter_events.py
       - name: Build standalone EXE
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name DataExtractionTool app.py
       - name: Smoke-test GUI startup
