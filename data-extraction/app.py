@@ -15,7 +15,7 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.13.0"
+APP_VERSION = "0.14.0"
 BUILD_DATE = "2026-10-25"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
@@ -29,7 +29,7 @@ class App(BatchImportMixin, ctk.CTk):
         super().__init__()
         self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1360x820"); self.minsize(1080, 680)
-        self.paths = []; self.source_file_column = None; self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.chart_settings = None; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
+        self.audit = None; self.source_record_column = None; self.paths = []; self.source_file_column = None; self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.chart_settings = None; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
         self._style(); self._ui(); self.apply_language()
         self.bind("<Button-1>", self.close_language_menu_on_outside_click, add="+")
         self.bind("<Escape>", lambda _e:self.close_language_menu(), add="+")
@@ -56,6 +56,8 @@ class App(BatchImportMixin, ctk.CTk):
         self.export_btn.pack(fill="x",padx=22)
         self.chart_btn=ctk.CTkButton(side,text="▥  生成图表并导出",height=42,fg_color="#0891b2",hover_color="#0e7490",text_color="#ffffff",font=("Microsoft YaHei UI",13,"bold"),command=self.open_chart)
         self.chart_btn.pack(fill="x",padx=22,pady=(9,0))
+        self.audit_btn=ctk.CTkButton(side,text="",command=self.open_audit)
+        self.audit_btn.pack(fill="x",padx=22,pady=(9,0))
         self.about_btn=ctk.CTkButton(side,text="关于",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_about)
         self.about_btn.pack(side="bottom",fill="x",padx=20,pady=(0,22))
         self.language_btn=ctk.CTkButton(side,text="语言",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_language_menu)
@@ -222,7 +224,11 @@ class App(BatchImportMixin, ctk.CTk):
 
     def change_sheet(self,name):
         if len(self.paths) <= 1 and self.path and self.path.suffix.lower() in (".xlsx",".xls"):self.load_sheet(name)
-    def load_sheet(self,name): self.source=pd.read_excel(self.path,sheet_name=name); self.loaded()
+    def load_sheet(self,name):
+        from batch_io import load_selection
+        parsers={'text':type(self).load_text,'.log':type(self).load_log,'.trc':type(self).load_trc}
+        self.commit_import(load_selection([self.path],parsers,sheet=name))
+        self.sheet.set(name)
     def loaded(self):
         self.source.columns=[str(x) for x in self.source.columns]; self.result=self.source.copy(); self.visible={x:True for x in self.source.columns}; self.clear_conditions(); extracted=self.extract_primary(silent=True); self.meta.configure(text=self.tr("summary",name=self.path.name,source=len(self.source),result=len(self.result))); (not extracted) and (self.refresh() or self.status.configure(text=self.tr("auto_none")))
     def add_condition(self):
@@ -261,7 +267,7 @@ class App(BatchImportMixin, ctk.CTk):
                 self.result=self.source[m].copy()
             else:self.result=self.source.copy()
             self.refresh()
-        except Exception as e:messagebox.showerror(self.tr("error"),str(e))
+        except Exception:raise
     def extract_primary(self,silent=False):
         if self.source is None:return False
         work=enrich_fields(self.source)
@@ -269,7 +275,7 @@ class App(BatchImportMixin, ctk.CTk):
             if not silent:messagebox.showinfo(self.tr("info"),self.tr("no_fields"))
             return False
         mask=work["values"].fillna("").astype(str).str.strip().ne("") & work["percent"].fillna("").astype(str).str.strip().ne("")
-        columns=([self.source_file_column] if self.source_file_column in work.columns else []) + ["values","percent"]
+        columns=([self.source_file_column] if self.source_file_column in work.columns else []) + ([self.source_record_column] if self.source_record_column in work.columns else []) + ["values","percent"]
         self.result=work.loc[mask,columns].copy()
         self.visible={c:True for c in columns};self.refresh()
         self.status.configure(text=self.tr("auto_ok",n=len(self.result)))
@@ -281,12 +287,14 @@ class App(BatchImportMixin, ctk.CTk):
         if "级别" not in self.source.columns:messagebox.showinfo(self.tr("info"),self.tr("log_only"));return
         self.result=self.source[self.source["级别"].astype(str).str.upper().isin(["ERROR","WARN","E","W","F","FATAL"])].copy();self.refresh()
     def reset(self):
-        if self.source is not None:self.result=self.source.copy();self.visible={c:True for c in self.source.columns};self.clear_conditions();self.refresh()
+        if self.source is not None:self.result=self.source.copy();self.visible={c:True for c in self.source.columns};self.refresh()
     def clear_all_data(self, confirm=True):
         if self.path is None and self.source is None:
             return
         if confirm and not messagebox.askyesno(self.tr("confirm"), self.tr("confirm_clear")):
             return
+        self.audit=None
+        self.source_record_column=None
         self.paths=[]
         self.source_file_column=None
         self.chart_settings=None
@@ -303,7 +311,7 @@ class App(BatchImportMixin, ctk.CTk):
 
     def dedupe(self):
         if self.result is None:return
-        n=len(self.result);self.result=self.result.drop_duplicates().copy();self.refresh();messagebox.showinfo(self.tr("done"),self.tr("deduped",n=n-len(self.result)))
+        n=len(self.result);self.result=self.result.drop_duplicates(subset=[c for c in self.result.columns if c!=self.source_record_column]).copy();self.refresh();messagebox.showinfo(self.tr("done"),self.tr("deduped",n=n-len(self.result)))
     def data(self):return self.result[[c for c in self.result.columns if self.visible.get(c,True)]] if self.result is not None else pd.DataFrame()
     def refresh(self):
         if self.result is None:return
@@ -352,14 +360,9 @@ class App(BatchImportMixin, ctk.CTk):
         open_chart_dialog(self, self.result.copy() if self.result is not None else None, self.lang, self.batch_label() if len(self.paths) > 1 else (self.path.name if self.path else ""), self.chart_settings)
 
     def export(self):
-        if self.result is None:messagebox.showinfo(self.tr("info"),self.tr("export_first"));return
-        f=self.fmt.get();ext={"Excel":".xlsx","CSV":".csv","TXT":".txt"}[f];p=filedialog.asksaveasfilename(title=self.tr("save_title"),defaultextension=ext,initialfile=self.tr("save_name")+ext,filetypes=[(f+" File" if self.lang=="en" else f+" 文件","*"+ext)])
-        if not p:return
-        try:
-            d=self.data()
-            if f=="Excel":d.to_excel(p,index=False)
-            elif f=="CSV":d.to_csv(p,index=False,encoding="utf-8-sig")
-            else:d.to_csv(p,index=False,sep="\t",encoding="utf-8-sig",quoting=csv.QUOTE_MINIMAL)
-            messagebox.showinfo(self.tr("export_ok"),self.tr("saved",n=len(d),path=p))
-        except Exception as e:messagebox.showerror(self.tr("export_failed"),str(e))
+        from audit_ui import export
+        return export(self)
+from audit_ui import install
+install(App)
+
 if __name__=="__main__":App().mainloop()

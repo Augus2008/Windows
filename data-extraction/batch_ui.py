@@ -5,6 +5,7 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
+from audit_ledger import AuditLedger
 from batch_io import load_selection, ImportCancelled, enrich_fields
 
 
@@ -87,11 +88,13 @@ class BatchImportMixin:
                 mask &= work['percent'].fillna('').astype(str).str.strip().ne('')
                 result = work.loc[mask, ['values', 'percent']].copy()
         # Preserve old models and widgets until the new view has rendered successfully.
-        fields = ('paths', 'path', 'source_file_column', 'source', 'result', 'visible', 'chart_settings')
+        fields = ('audit', 'source_record_column', 'paths', 'path', 'source_file_column', 'source', 'result', 'visible', 'chart_settings')
         previous = {key: getattr(self, key) for key in fields}
         labels = {key: getattr(self, key).cget('text') for key in ('file', 'meta', 'status', 'rows')}
         sheet = (list(self.sheet.cget('values')), self.sheet.cget('state'), self.sheet.get())
         try:
+            self.audit=AuditLedger(payload)
+            self.source_record_column=payload.get('record_column')
             self.paths = payload['paths']
             self.path = self.paths[0]
             self.source_file_column = payload['source_column']
@@ -103,7 +106,7 @@ class BatchImportMixin:
                 names = payload['sheet_names']
                 if names:
                     self.sheet.configure(values=names, state='readonly')
-                    self.sheet.set(names[0])
+                    self.sheet.set(payload['manifest'][0]['worksheets_read'][0])
             self.refresh_localized_state()
         except Exception:
             for key, value in previous.items():
@@ -118,6 +121,8 @@ class BatchImportMixin:
             for key, text in labels.items():
                 getattr(self, key).configure(text=text)
             raise
+        if list(result.index)!=list(frame.index) or list(result.columns)!=list(frame.columns):
+            self.audit.record('auto_extract','source',list(frame.index),list(frame.index),list(result.index),{},list(result.columns))
         # Destructive operations only after rendering succeeds; failures keep filters.
         self.clear_conditions()
 

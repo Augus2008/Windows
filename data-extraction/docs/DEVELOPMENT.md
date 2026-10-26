@@ -41,3 +41,7 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name DataExtrac
 - 不将 `.grid()` / `.pack()` 返回值赋给控件变量。
 - 新格式应保留原始行，解析失败不得静默丢数据。
 - 新版本必须更新版本号、CHANGELOG 和文档。
+
+## 对账功能回归
+运行 `python -m unittest -v test_audit test_verified_export`，Linux使用 `xvfb-run -a`。
+导出模块在同目录临时文件验证成功后才替换目标，报告口径见AUDIT.md。

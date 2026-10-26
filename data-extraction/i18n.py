@@ -55,3 +55,17 @@ TEXT = {
 # Batch import text; provenance data column names remain stable across languages.
 TEXT['zh'].update({'import_auto': '＋  导入文件（可多选）', 'select_file': '选择数据文件（可多选；Excel 仅读首表）', 'supported': '支持单文件 / 多文件：Excel、CSV、TXT、LOG、TRC', 'batch_loading': '正在导入，请稍候', 'batch_cancel': '取消导入', 'batch_progress': '正在读取 {i}/{n}：{name}', 'batch_failed': '本次导入未完成，原数据未改变。\n{error}', 'batch_name': '{n} 个文件合并结果', 'batch_imported': '已合并 {n} 个文件\nExcel 仅读取首个工作表', 'batch_source': '全部文件合并 · Excel 首表', 'batch_ready': '多文件已合并，可统一筛选并导出一个文件', 'batch_summary': '{n} 个文件  ·  合并 {source:,} 行  ·  结果 {result:,} 行'})
 TEXT['en'].update({'import_auto': '+  Import Files (Multiple)', 'select_file': 'Select files (multiple; first Excel sheet only)', 'supported': 'Single / multiple files: Excel, CSV, TXT, LOG, TRC', 'batch_loading': 'Importing, please wait', 'batch_cancel': 'Cancel Import', 'batch_progress': 'Reading {i}/{n}: {name}', 'batch_failed': 'Import was not completed. Previous data is unchanged.\n{error}', 'batch_name': 'Merged result of {n} files', 'batch_imported': 'Merged {n} files\nFirst worksheet only for each Excel file', 'batch_source': 'All files merged · First Excel sheet', 'batch_ready': 'Files merged. Filter together and export one file.', 'batch_summary': '{n} files  ·  Merged {source:,} rows  ·  Result {result:,} rows'})
+
+TEXT['zh'].update(audit_title='批量对账 / 对账报告',audit_save='保存 JSON 报告（含本机路径）',
+ audit_explain='逐文件对账；记录编号是解析后的数据记录，不是物理行号。\n排除数=源记录-当前保留；操作阶段和未应用控件见下方。报告含本机路径隐私。',
+ audit_source_refused='禁止覆盖已导入的源文件',
+ audit_verified='已保存 {n} 条并完整回读验证成功：{path}\n请点击“批量对账 / 对账报告”保存 JSON，含本次导出哈希与阶段。')
+
+TEXT['en'].update(audit_title='Batch reconciliation / Audit report',
+ audit_save='Save JSON report (contains local paths)',
+ audit_explain='Record numbers are parsed data records, NOT physical lines. Excluded = source minus kept. See stages and pending controls below. Reports contain local path privacy.',
+ audit_source_refused='Cannot overwrite an imported source file',
+ audit_verified='Saved {n} rows; full read-back VERIFIED: {path}. Open Batch reconciliation / Audit report to save JSON with export hash and stage.')
+
+TEXT['zh'].update(audit_headers='文件 | 状态 | 工作表(已读 / 有意跳过) | 源/读取记录 | 当前保留 | 排除',audit_read='读取成功')
+TEXT['en'].update(audit_headers='file | status | worksheets(read / skipped) | source/read | kept | excluded',audit_read='read successfully')

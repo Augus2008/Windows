@@ -56,7 +56,7 @@ class BatchTests(unittest.TestCase):
         a = self.csv('a.csv', {'name': ['a'], 'value': [1]})
         b = self.csv('b.csv', {'value': [2], 'extra': ['x']})
         result = self.selection(a, b)
-        self.assertEqual(list(result['frame'].columns), ['来源文件', 'name', 'value', 'extra'])
+        self.assertEqual(list(result['frame'].columns), ['来源文件', '来源记录', 'name', 'value', 'extra'])
         self.assertEqual(result['frame']['name'].tolist(), ['a', ''])
         self.assertEqual(result['frame']['value'].tolist(), [1, 2])
 
@@ -236,7 +236,7 @@ class BatchTests(unittest.TestCase):
         b = self.csv('b.csv', {'#999': [4]})
         self.commit(a, b)
         headings = [self.app.tree.heading(c, 'text') for c in self.app.tree['columns']]
-        self.assertEqual(headings, ['来源文件', '#999', '1', 'col_0'])
+        self.assertEqual(headings, ['来源文件', '来源记录', '#999', '1', 'col_0'])
         self.assertEqual(len(self.app.tree.get_children()), 2)
 
     def test_ui_commit_failure_restores_models_filters_and_preview(self):

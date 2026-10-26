@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import os
 import re
 import pandas as pd
+from audit_ledger import snapshot, unique_column
 
 
 class ImportCancelled(Exception):
@@ -28,7 +29,7 @@ def enrich_fields(frame):
     return frame
 
 
-def read_dataset(path, parsers):
+def read_dataset(path, parsers, sheet=None):
     path = Path(path)
     names = []
     if path.suffix.lower() in ('.xlsx', '.xls'):
@@ -36,7 +37,7 @@ def read_dataset(path, parsers):
             names = book.sheet_names
             if not names:
                 raise ValueError('Excel contains no worksheets')
-            frame = pd.read_excel(book, sheet_name=names[0])
+            frame = pd.read_excel(book, sheet_name=sheet or names[0])
     else:
         # Reuse legacy parsers on an isolated holder; loaded() must not touch Tk.
         holder = SimpleNamespace(source=None, loaded=lambda: None)
@@ -50,7 +51,8 @@ def read_dataset(path, parsers):
     return frame, names
 
 
-def load_selection(paths, parsers, progress=None, cancelled=None):
+def load_selection(paths, parsers, progress=None, cancelled=None, sheet=None):
+    paths=list(paths)
     selected, seen = [], set()
     for value in paths:
         path = Path(value).resolve()
@@ -60,7 +62,8 @@ def load_selection(paths, parsers, progress=None, cancelled=None):
             selected.append(path)
     if not selected:
         raise ValueError('No files selected')
-    frames, names = [], []
+    frames, names, manifest, lineage = [], [], [], {}
+    offset=0
     batch = len(selected) > 1
     for index, path in enumerate(selected, 1):
         if cancelled and cancelled.is_set():
@@ -68,14 +71,26 @@ def load_selection(paths, parsers, progress=None, cancelled=None):
         if progress:
             progress(index, len(selected), path.name)
         try:
-            frame, sheets = read_dataset(path, parsers)
+            before=snapshot(path)
+            frame, sheets = read_dataset(path, parsers, sheet)
+            if snapshot(path)!=before:
+                raise ValueError("Source changed while reading")
             frames.append(enrich_fields(frame) if batch else frame)
             names.append(sheets)
+            fid=f'file_{index}'
+            selected_sheet=(sheet or sheets[0]) if sheets else None
+            manifest.append(dict(file_id=fid,path=str(path),status='read',
+                read_rows=len(frame),worksheets_read=[selected_sheet] if sheets else [],
+                worksheets_skipped=[x for x in sheets if x!=selected_sheet],**before))
+            for n in range(len(frame)):
+                lineage[offset+n]=(fid,n+1)
+            offset+=len(frame)
         except Exception as exc:
             raise ValueError(f'{path.name}: {exc}') from exc
     if cancelled and cancelled.is_set():
         raise ImportCancelled()
     source_column = None
+    record_column = None
     if batch:
         source_column = '来源文件'
         used = {c for frame in frames for c in frame.columns}
@@ -83,6 +98,9 @@ def load_selection(paths, parsers, progress=None, cancelled=None):
         while source_column in used:
             source_column = f'来源文件_{suffix}'
             suffix += 1
+        record_column=unique_column(used | {source_column}, '来源记录')
+        for f in frames:
+            f.insert(0,record_column,list(range(1,len(f)+1)))
         basenames = [p.name for p in selected]
         for path, frame in zip(selected, frames):
             # Distinguish identically named files from different directories.
@@ -94,4 +112,7 @@ def load_selection(paths, parsers, progress=None, cancelled=None):
     else:
         frame = frames[0]
     return {'paths': selected, 'frame': frame, 'sheet_names': names[0],
-            'source_column': source_column}
+            'source_column': source_column, 'record_column':record_column,
+            'manifest':manifest,'lineage':lineage,
+            'selection':{'input_count':len(paths),'unique_files':len(selected),
+                         'duplicate_selections':len(paths)-len(selected)}}

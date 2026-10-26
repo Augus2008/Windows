@@ -19,6 +19,7 @@ def apply_language(self):
     self.export_label.configure(text=t["export_format"])
     self.export_btn.configure(text=t["export"])
     self.chart_btn.configure(text=t["chart_export"])
+    self.audit_btn.configure(text=t["audit_title"])
     self.about_btn.configure(text=t["about"])
     self.language_btn.configure(text=t["language_menu"])
     self.advanced_label.configure(text=t["advanced"])
