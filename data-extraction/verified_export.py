@@ -36,15 +36,29 @@ def _write(path, fmt, table):
             for ci, value in enumerate(row, 1):
                 ws.cell(row=ri, column=ci, value=value).data_type = "s"
         wb.save(path)
-        _preserve_cr(path)
+        _preserve_cr(path, table)
     finally:
         wb.close()
 
 
 
-def _preserve_cr(path):
-    # ElementTree may emit raw CR in text, which XML readers normalize to LF.
-    # Numeric entities preserve CR without changing literal _x000D_ strings.
+def _preserve_cr(path, table):
+    # Filename-based XML writers can translate LF to CRLF on Windows.
+    # Restore canonical cell text before binary serialization; CR uses entities.
+    from xml.etree import ElementTree as ET
+    from openpyxl.utils.cell import coordinate_to_tuple
+    def restore(xml):
+        ns='{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
+        root=ET.fromstring(xml)
+        for cell in root.iter(ns+'c'):
+            ri,ci=coordinate_to_tuple(cell.attrib['r'])
+            inline=cell.find(ns+'is')
+            if inline is None:inline=ET.SubElement(cell,ns+'is')
+            for child in list(inline):inline.remove(child)
+            text=ET.SubElement(inline,ns+'t')
+            text.set('{http://www.w3.org/XML/1998/namespace}space','preserve')
+            text.text=table[ri-1][ci-1]
+        return ET.tostring(root,encoding='utf-8').replace(b'\r',b'&#13;')
     from io import BytesIO
     from zipfile import ZipFile
     output = BytesIO()
@@ -52,7 +66,7 @@ def _preserve_cr(path):
         for info in source.infolist():
             data = source.read(info)
             if info.filename.startswith("xl/worksheets/") and info.filename.endswith(".xml"):
-                data = data.replace(b"\r", b"&#13;")
+                data = restore(data)
             target.writestr(info, data)
     with open(path, "wb") as dest:
         dest.write(output.getvalue())
@@ -94,6 +108,8 @@ def export_verified(frame, destination, fmt):
         raise ValueError("Cannot export zero columns")
     rows = [[_text(v) for v in row] for row in frame.itertuples(index=False, name=None)]
     table = [headers] + rows
+    if fmt == "xlsx" and any(len(v)>32767 for row in table for v in row):
+        raise VerificationError("Excel cell text exceeds 32767 characters")
     if fmt == "xlsx" and (len(table) > 1048576 or len(headers) > 16384):
         raise ValueError("XLSX dimensions exceed Excel limits")
     dest = Path(destination)

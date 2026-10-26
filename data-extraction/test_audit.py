@@ -149,7 +149,7 @@ class AuditTests(unittest.TestCase):
         src=self.csv('a.csv',x=[1234567890123456789]);self.commit(src)
         dest=self.root/'audit.json'; data=report(self.app)
         save_report(data,dest,[src])
-        self.assertEqual(json.loads(dest.read_text())['totals']['current_kept'],1)
+        self.assertEqual(json.loads(dest.read_text(encoding='utf-8'))['totals']['current_kept'],1)
         with self.assertRaises(FileExistsError):save_report(data,dest,[src])
         with self.assertRaises(ValueError):save_report(data,src,[src])
         with patch('app.filedialog.asksaveasfilename',return_value=str(src)),patch('app.messagebox.showerror') as err:
@@ -177,7 +177,7 @@ class AuditTests(unittest.TestCase):
         self.app.clear_all_data(False);out=self.root/'captured.json'
         with patch('app.filedialog.asksaveasfilename',return_value=str(out)),patch('app.messagebox.showinfo'):
             save(self.app,snapshot)
-        self.assertEqual(json.loads(out.read_text())['totals']['current_kept'],1)
+        self.assertEqual(json.loads(out.read_text(encoding='utf-8'))['totals']['current_kept'],1)
         invalid=self.root/'invalid.json'
         with self.assertRaises(ValueError):save_report({'bad':float('nan')},invalid)
         self.assertFalse(invalid.exists())

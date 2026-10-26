@@ -143,5 +143,22 @@ class VerifiedExportTests(unittest.TestCase):
         ve.export_verified(frame, self.dest, "xlsx")
         self.assertEqual(ve._read(self.dest, "xlsx"), [["h\r\n"], ["a\rb"], ["_x000D_"], ["_x005F_"], ["\r\n"], ["&<>\r"]])
 
+    def test_simulated_windows_xml_newlines(self):
+        from zipfile import ZipFile
+        from io import BytesIO
+        restore = ve._preserve_cr
+        def translate(path, table):
+            buf = BytesIO()
+            with ZipFile(path) as source, ZipFile(buf, 'w') as target:
+                for info in source.infolist():
+                    data = source.read(info)
+                    if info.filename.startswith('xl/worksheets/'):
+                        data = data.replace(b'\n', b'\r\n')
+                    target.writestr(info, data)
+            Path(path).write_bytes(buf.getvalue())
+            restore(path, table)
+        with patch.object(ve, '_preserve_cr', side_effect=translate):
+            ve.export_verified(self.frame, self.dest, 'xlsx')
+
 if __name__ == "__main__":
     unittest.main()
