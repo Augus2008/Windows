@@ -117,7 +117,15 @@ class WorkbenchTests(unittest.TestCase):
         for widget in a.conditions[0][1:]:self.assert_inside(widget)
         a.geometry('1360x820'); self.pump()
         print('LAYOUT_DIAGNOSTIC',dict(window=(a.winfo_width(),a.winfo_height()),screen=(a.winfo_screenwidth(),a.winfo_screenheight()),panel=a.filter_panel.winfo_height(),table=a.table_panel.winfo_height(),tree=a.tree.winfo_height()),flush=True)
-        self.assertGreaterEqual(a.tree.winfo_height(),250)
+        # Windows hosted runner is 1024x768 and clamps the requested 820px
+        # window to its work area. Preserve the full-size 250px requirement,
+        # subtracting only the measured missing client height on small screens.
+        self.assertGreaterEqual(a.winfo_height(),680)
+        required=max(100,250-max(0,820-a.winfo_height()))
+        self.assertGreaterEqual(a.tree.winfo_height(),required)
+        self.assertLessEqual(a.filter_panel.winfo_height(),160)
+        for widget in (a.export_btn,a.audit_btn,a.add_btn,a.clear_btn):
+            self.assert_inside(widget)
     def test_pending_normalized_and_actual_filter(self):
         self.commit(self.csv('channels.csv',channel=['CH-01','CH-02'])); a=self.app
         self.assertEqual(self.text(a.pending_label),a.tr('wb_ready'))
