@@ -19,7 +19,13 @@ class WorkbenchTests(unittest.TestCase):
         self.app.clear_all_data(False); self.app.lang='zh'; self.app.apply_language()
         self.app.show_filter_panel(False); self.app.geometry('1360x820'); self.pump()
     def tearDown(self):self.tmp.cleanup()
-    def pump(self):self.app.update_idletasks(); self.app.update()
+    def pump(self):
+        # Windows window-manager geometry and CTk DPI callbacks are asynchronous.
+        import tkinter as tk
+        settled=tk.BooleanVar(self.app,value=False)
+        self.app.after(150,lambda:settled.set(True))
+        self.app.wait_variable(settled)
+        self.app.update_idletasks();self.app.update()
     def csv(self,filename,**data):
         p=self.root/filename; pd.DataFrame(data).to_csv(p,index=False); return p
     def commit(self,*paths):
@@ -110,6 +116,7 @@ class WorkbenchTests(unittest.TestCase):
         a.language_action('English'); self.pump(); self.assert_inside(a.logic)
         for widget in a.conditions[0][1:]:self.assert_inside(widget)
         a.geometry('1360x820'); self.pump()
+        print('LAYOUT_DIAGNOSTIC',dict(window=(a.winfo_width(),a.winfo_height()),screen=(a.winfo_screenwidth(),a.winfo_screenheight()),panel=a.filter_panel.winfo_height(),table=a.table_panel.winfo_height(),tree=a.tree.winfo_height()),flush=True)
         self.assertGreaterEqual(a.tree.winfo_height(),250)
     def test_pending_normalized_and_actual_filter(self):
         self.commit(self.csv('channels.csv',channel=['CH-01','CH-02'])); a=self.app
