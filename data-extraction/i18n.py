@@ -69,3 +69,38 @@ TEXT['en'].update(audit_title='Batch reconciliation / Audit report',
 
 TEXT['zh'].update(audit_headers='文件 | 状态 | 工作表(已读 / 有意跳过) | 源/读取记录 | 当前保留 | 排除',audit_read='读取成功')
 TEXT['en'].update(audit_headers='file | status | worksheets(read / skipped) | source/read | kept | excluded',audit_read='read successfully')
+
+# Desktop workbench vocabulary (shared keys in both locales).
+TEXT['zh'].update({
+'wb_preview':'UI 预览',
+'wb_import':'导入文件','wb_filters':'筛选条件','wb_hide_filters':'收起条件',
+'wb_pending':'筛选控件有更改，点击应用后生效',
+'wb_applied':'筛选控件与已应用条件一致',
+'wb_ready':'搜索或设置条件，然后点击应用',
+'wb_files':'已读取文件','wb_read':'读取行数','wb_result':'当前结果',
+'wb_context':'当前批次 · {n} 个文件','wb_loaded':'数据工作台 / 结果预览',
+'wb_file_rows':'已读取 · {n} 行','wb_sheet':'当前工作表：{name}',
+'wb_skipped':'仅读取所选表，另 {n} 张未读',
+'wb_empty':'尚未导入数据\n导入文件，开始整理与筛选',
+'wb_no_results':'当前结果为空\n尝试调整条件或恢复原始数据',
+'wb_unverified':'导出未核验','wb_not_exported':'当前结果尚未导出',
+'wb_verified':'当前结果 · 导出时回读通过',
+})
+TEXT['en'].update({
+'wb_preview':'UI Preview',
+'wb_import':'Import files','wb_filters':'Filter conditions','wb_hide_filters':'Hide conditions',
+'wb_pending':'Controls changed; click Apply to use them',
+'wb_applied':'Controls match the applied conditions',
+'wb_ready':'Search or set conditions, then click Apply',
+'wb_files':'Files read','wb_read':'Rows read','wb_result':'Current results',
+'wb_context':'Current batch · {n} files','wb_loaded':'Data workspace / Result preview',
+'wb_file_rows':'Read · {n} rows','wb_sheet':'Current sheet: {name}',
+'wb_skipped':'Selected sheet only; {n} not read',
+'wb_empty':'No data imported\nImport files to start preparing your data',
+'wb_no_results':'No matching results\nAdjust filters or restore source data',
+'wb_unverified':'Export not verified','wb_not_exported':'Current result not exported',
+'wb_verified':'Current result · verified at export',
+})
+
+TEXT['zh']['wb_search_hint']='搜索全部列'
+TEXT['en']['wb_search_hint']='Search all columns'

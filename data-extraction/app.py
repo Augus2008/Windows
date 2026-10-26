@@ -9,17 +9,18 @@ from i18n_runtime import tr, show_about, language_action, apply_language, refres
 from chart_dialog import open_chart_dialog
 from batch_ui import BatchImportMixin
 from batch_io import enrich_fields
+from workbench_ui import WorkbenchMixin
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.14.0"
-BUILD_DATE = "2026-10-25"
+APP_VERSION = "0.15.0"
+BUILD_DATE = "2026-10-26"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
-class App(BatchImportMixin, ctk.CTk):
+class App(WorkbenchMixin, BatchImportMixin, ctk.CTk):
     tr = tr
     show_about = show_about
     language_action = language_action
@@ -34,70 +35,6 @@ class App(BatchImportMixin, ctk.CTk):
         self.bind("<Button-1>", self.close_language_menu_on_outside_click, add="+")
         self.bind("<Escape>", lambda _e:self.close_language_menu(), add="+")
 
-    def _style(self):
-        s = ttk.Style(); s.theme_use("clam")
-        s.configure("Treeview", background="#fff", fieldbackground="#fff", foreground="#263238", rowheight=28, font=("Microsoft YaHei UI", 10))
-        s.configure("Treeview.Heading", background="#e8f1ff", foreground="#1e3a5f", font=("Microsoft YaHei UI", 10, "bold"))
-        s.map("Treeview", background=[("selected", "#2f80ed")], foreground=[("selected", "white")])
-
-    def _ui(self):
-        self.grid_columnconfigure(1, weight=1); self.grid_rowconfigure(1, weight=1)
-        side = ctk.CTkFrame(self, width=285, corner_radius=0, fg_color="#12314a"); side.grid(row=0,column=0,rowspan=2,sticky="nsew"); side.grid_propagate(False)
-        self.import_btn=ctk.CTkButton(side,text="＋  导入并自动提取",height=44,command=self.import_file,font=("Microsoft YaHei UI",14,"bold"))
-        self.import_btn.pack(fill="x",padx=22,pady=(46,0))
-        self.file = ctk.CTkLabel(side,text="支持导入：Excel、CSV、TXT、LOG、TRC",justify="left",wraplength=235,text_color="#d9eaf7"); self.file.pack(anchor="w",padx=24,pady=(13,22))
-        self.source_label=ctk.CTkLabel(side,text="数据源 / 工作表",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold"))
-        self.source_label.pack(anchor="w",padx=24)
-        self.sheet = ctk.CTkComboBox(side,values=["导入后显示数据源"],state="readonly",command=self.change_sheet,height=36); self.sheet.pack(fill="x",padx=22,pady=(7,22)); self.sheet.set("导入后显示数据源")
-        self.export_label=ctk.CTkLabel(side,text="导出格式",text_color="#b9d6eb",font=("Microsoft YaHei UI",12,"bold"))
-        self.export_label.pack(anchor="w",padx=24)
-        self.fmt=ctk.CTkSegmentedButton(side,values=["Excel","CSV","TXT"]); self.fmt.set("Excel"); self.fmt.pack(fill="x",padx=22,pady=(8,10))
-        self.export_btn=ctk.CTkButton(side,text="⇩  导出当前结果",height=42,fg_color="#38a169",hover_color="#258052",text_color="#ffffff",font=("Microsoft YaHei UI",13,"bold"),command=self.export)
-        self.export_btn.pack(fill="x",padx=22)
-        self.chart_btn=ctk.CTkButton(side,text="▥  生成图表并导出",height=42,fg_color="#0891b2",hover_color="#0e7490",text_color="#ffffff",font=("Microsoft YaHei UI",13,"bold"),command=self.open_chart)
-        self.chart_btn.pack(fill="x",padx=22,pady=(9,0))
-        self.audit_btn=ctk.CTkButton(side,text="",command=self.open_audit)
-        self.audit_btn.pack(fill="x",padx=22,pady=(9,0))
-        self.about_btn=ctk.CTkButton(side,text="关于",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_about)
-        self.about_btn.pack(side="bottom",fill="x",padx=20,pady=(0,22))
-        self.language_btn=ctk.CTkButton(side,text="语言",height=38,fg_color="#193d57",hover_color="#24516f",command=self.show_language_menu)
-        self.language_btn.pack(side="bottom",fill="x",padx=20,pady=(0,8))
-        head=ctk.CTkFrame(self,height=84,corner_radius=0,fg_color="white"); head.grid(row=0,column=1,sticky="ew"); head.grid_columnconfigure(0,weight=1)
-        self.status=ctk.CTkLabel(head,text="导入文件，自动提取 values 和 percent",font=("Microsoft YaHei UI",16,"bold"),text_color="#1f3b57"); self.status.grid(row=0,column=0,padx=28,pady=(18,2),sticky="w")
-        self.meta=ctk.CTkLabel(head,text="支持 Excel、CSV、TXT、LOG 与 TRC 文件",text_color="#78909c"); self.meta.grid(row=1,column=0,padx=29,pady=(0,16),sticky="w")
-        self.language_popup = None
-        main=ctk.CTkFrame(self,corner_radius=0,fg_color="#f4f7fb"); main.grid(row=1,column=1,sticky="nsew"); main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(2,weight=1)
-        box=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); box.grid(row=0,column=0,padx=22,pady=(20,10),sticky="ew"); box.grid_columnconfigure(0,weight=1)
-        self.advanced_label=ctk.CTkLabel(box,text="高级筛选（可选）",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53")
-        self.advanced_label.grid(row=0,column=0,padx=18,pady=(14,6),sticky="w")
-        self.logic=ctk.CTkSegmentedButton(box,values=["全部条件 AND","任一条件 OR"],width=300,selected_color="#0f766e",selected_hover_color="#115e59",unselected_color="#475569",unselected_hover_color="#334155",text_color="#ffffff"); self.logic.set("全部条件 AND"); self.logic.grid(row=0,column=1,padx=18,pady=(14,6),sticky="e")
-        self.condbox=ctk.CTkFrame(box,fg_color="transparent"); self.condbox.grid(row=1,column=0,columnspan=2,padx=14,sticky="ew")
-        self.add_btn=ctk.CTkButton(box,text="＋ 添加条件",width=116,height=34,corner_radius=8,fg_color="#0ea5e9",hover_color="#0284c7",command=self.add_condition)
-        self.add_btn.grid(row=2,column=0,padx=18,pady=(8,14),sticky="w")
-        self.clear_btn=ctk.CTkButton(box,text="清空筛选",width=104,height=34,corner_radius=8,fg_color="#64748b",hover_color="#475569",command=self.clear_conditions)
-        self.clear_btn.grid(row=2,column=1,padx=18,pady=(8,14),sticky="e")
-        tools=ctk.CTkFrame(main,fg_color="transparent"); tools.grid(row=1,column=0,padx=24,pady=5,sticky="ew"); tools.grid_columnconfigure(0,weight=1)
-        self.quick=tk.StringVar(); self.quick_entry=ctk.CTkEntry(tools,textvariable=self.quick,placeholder_text="快速搜索全部列…",height=35,width=280); self.quick_entry.grid(row=0,column=0,sticky="w"); self.quick_entry.bind("<Return>",lambda _:self.apply())
-        self.search_btn=ctk.CTkButton(tools,text="搜索 / 应用筛选",width=120,height=35,fg_color="#2563eb",hover_color="#1d4ed8",command=self.apply)
-        self.search_btn.grid(row=0,column=1,padx=8)
-        self.dedupe_btn=ctk.CTkButton(tools,text="去除重复行",width=105,height=35,fg_color="#7c3aed",hover_color="#6d28d9",command=self.dedupe)
-        self.dedupe_btn.grid(row=0,column=2,padx=4)
-        self.reextract_btn=ctk.CTkButton(tools,text="重新自动提取",width=90,height=35,fg_color="#0f766e",hover_color="#115e59",command=self.extract_primary)
-        self.reextract_btn.grid(row=0,column=3,padx=4)
-        self.restore_btn=ctk.CTkButton(tools,text="恢复原始数据",width=110,height=35,fg_color="#d97706",hover_color="#b45309",text_color="#ffffff",command=self.reset)
-        self.restore_btn.grid(row=0,column=4)
-        self.clear_all_btn=ctk.CTkButton(tools,text="清空全部数据",width=112,height=35,fg_color="#dc2626",hover_color="#b91c1c",command=self.clear_all_data)
-        self.clear_all_btn.grid(row=0,column=5,padx=(8,0))
-        self.colmenu=ctk.CTkOptionMenu(tools,values=["列操作","选择显示列…","显示全部列"],width=115,height=35,fg_color="#475569",button_color="#334155",button_hover_color="#1e293b",command=self.column_action)
-        self.colmenu.grid(row=0,column=6,padx=(8,0)); self.colmenu.set("列操作")
-        table=ctk.CTkFrame(main,fg_color="#ffffff",corner_radius=14,border_width=1,border_color="#e2e8f0"); table.grid(row=2,column=0,padx=22,pady=(8,20),sticky="nsew"); table.grid_columnconfigure(0,weight=1); table.grid_rowconfigure(1,weight=1)
-        top=ctk.CTkFrame(table,fg_color="transparent"); top.grid(row=0,column=0,padx=16,pady=(13,7),sticky="ew"); top.grid_columnconfigure(1,weight=1)
-        self.preview_label=ctk.CTkLabel(top,text="结果预览",font=("Microsoft YaHei UI",15,"bold"),text_color="#243b53")
-        self.preview_label.grid(row=0,column=0,sticky="w")
-        self.rows=ctk.CTkLabel(top,text="0 行",text_color="#607d8b"); self.rows.grid(row=0,column=1,padx=12,sticky="w")
-        wrap=ctk.CTkFrame(table,fg_color="transparent"); wrap.grid(row=1,column=0,padx=15,pady=(0,15),sticky="nsew"); wrap.grid_columnconfigure(0,weight=1); wrap.grid_rowconfigure(0,weight=1)
-        self.tree=ttk.Treeview(wrap,show="headings",selectmode="extended"); y=ttk.Scrollbar(wrap,orient="vertical",command=self.tree.yview); x=ttk.Scrollbar(wrap,orient="horizontal",command=self.tree.xview); self.tree.configure(yscrollcommand=y.set,xscrollcommand=x.set); self.tree.grid(row=0,column=0,sticky="nsew"); y.grid(row=0,column=1,sticky="ns"); x.grid(row=1,column=0,sticky="ew"); self.tree.bind("<Control-c>",self.copy_selection); self.tree.bind("<Button-3>",self.popup_copy_menu)
-
     def show_language_menu(self):
         if self.language_popup is not None and self.language_popup.winfo_exists():
             self.close_language_menu()
@@ -110,15 +47,15 @@ class App(BatchImportMixin, ctk.CTk):
         popup = tk.Toplevel(self)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
-        popup.configure(bg="#12314a")
+        popup.configure(bg="#F5F7FA")
         popup.geometry(f"{width}x{height}+{x}+{y}")
         self.language_popup = popup
         self.language_option_buttons = []
-        panel = ctk.CTkFrame(popup, fg_color="#163b56", corner_radius=10, border_width=1, border_color="#315f7e")
+        panel = ctk.CTkFrame(popup, fg_color="#FFFFFF", corner_radius=10, border_width=1, border_color="#E3E8F0")
         panel.pack(fill="both", expand=True)
         for code, label, choice in (("zh", "中文", "中文"), ("en", "English", "English")):
             selected = self.lang == code
-            button = ctk.CTkButton(panel, text=("✓  " if selected else "    ") + label, height=38, corner_radius=7, anchor="w", fg_color="#2b6388" if selected else "transparent", hover_color="#285a7a", text_color="#ffffff", font=("Microsoft YaHei UI", 12, "bold" if selected else "normal"), command=lambda c=choice:self.select_language(c))
+            button = ctk.CTkButton(panel, text=("✓  " if selected else "    ") + label, height=38, corner_radius=7, anchor="w", fg_color="#DBEAFE" if selected else "transparent", hover_color="#EDF1F7", text_color="#172B4D", font=(self.ui_font, 12, "bold" if selected else "normal"), command=lambda c=choice:self.select_language(c))
             self.language_option_buttons.append(button)
             button.pack(fill="x", padx=6, pady=(6,0) if code == "zh" else (2,6))
         popup.bind("<Escape>", lambda _e:self.close_language_menu())
@@ -233,11 +170,12 @@ class App(BatchImportMixin, ctk.CTk):
         self.source.columns=[str(x) for x in self.source.columns]; self.result=self.source.copy(); self.visible={x:True for x in self.source.columns}; self.clear_conditions(); extracted=self.extract_primary(silent=True); self.meta.configure(text=self.tr("summary",name=self.path.name,source=len(self.source),result=len(self.result))); (not extracted) and (self.refresh() or self.status.configure(text=self.tr("auto_none")))
     def add_condition(self):
         if self.source is None or len(self.source.columns)==0: messagebox.showinfo(self.tr("info"),self.tr("no_file")); return
+        self.show_filter_panel(True)
         r=ctk.CTkFrame(self.condbox,fg_color="#f4f7fb",corner_radius=8);r.pack(fill="x",pady=4)
         col=ctk.CTkComboBox(r,values=list(self.source.columns),width=190);col.set(str(self.source.columns[0]));col.pack(side="left",padx=(8,5),pady=7)
         op=ctk.CTkComboBox(r,values=TEXT[self.lang]["ops"],width=150);op.set(TEXT[self.lang]["ops"][0]);op.pack(side="left",padx=5,pady=7)
         val=ctk.CTkEntry(r,placeholder_text=self.tr("condition_value"),height=31);val.pack(side="left",fill="x",expand=True,padx=5,pady=7)
-        ctk.CTkButton(r,text="×",width=32,height=31,fg_color="#e57373",command=lambda:self.remove_condition(r)).pack(side="right",padx=(5,8),pady=7);self.conditions.append((r,col,op,val))
+        ctk.CTkButton(r,text="×",width=32,height=31,fg_color="#EDF1F7",text_color="#B42332",hover_color="#DFE6F0",command=lambda:self.remove_condition(r)).pack(side="right",padx=(5,8),pady=7);self.conditions.append((r,col,op,val))
     def remove_condition(self,r):self.conditions=[x for x in self.conditions if x[0]!=r];r.destroy()
     def clear_conditions(self):
         for r,*_ in self.conditions:r.destroy()
@@ -308,13 +246,15 @@ class App(BatchImportMixin, ctk.CTk):
         self.rows.configure(text=self.tr("rows",n=0))
         self.fmt.set("Excel")
         self.refresh_localized_state()
+        self.show_filter_panel(False)
 
     def dedupe(self):
         if self.result is None:return
         n=len(self.result);self.result=self.result.drop_duplicates(subset=[c for c in self.result.columns if c!=self.source_record_column]).copy();self.refresh();messagebox.showinfo(self.tr("done"),self.tr("deduped",n=n-len(self.result)))
     def data(self):return self.result[[c for c in self.result.columns if self.visible.get(c,True)]] if self.result is not None else pd.DataFrame()
     def refresh(self):
-        if self.result is None:return
+        if self.result is None:
+            self.refresh_workbench(); return
         if len(self.paths) > 1:
             self.meta.configure(text=self.tr("batch_summary", n=len(self.paths), source=len(self.source), result=len(self.result)))
         d=self.data();cols=list(d.columns);self.tree.delete(*self.tree.get_children());ids=[f"data_col_{i}" for i in range(len(cols))];self.tree["columns"]=ids
@@ -324,6 +264,8 @@ class App(BatchImportMixin, ctk.CTk):
             self.tree.column(column_id,width=max(120,min(260,len(c)*16+80)),anchor=anchor)
         for _,r in d.head(PREVIEW_ROWS).iterrows():self.tree.insert("","end",values=["" if pd.isna(x) else str(x)[:500] for x in r])
         self.rows.configure(text=self.tr("rows",n=len(d))+(self.tr("preview_limit") if len(d)>PREVIEW_ROWS else ""))
+        self.style_preview_rows()
+        self.refresh_workbench()
     def column_action(self,choice):
         if choice in (TEXT["zh"]["choose_columns"],TEXT["en"]["choose_columns"]):self.columns()
         elif choice in (TEXT["zh"]["show_all"],TEXT["en"]["show_all"]) and self.result is not None:self.visible={c:True for c in self.result.columns};self.refresh()
@@ -364,5 +306,8 @@ class App(BatchImportMixin, ctk.CTk):
         return export(self)
 from audit_ui import install
 install(App)
+from workbench_ui import refresh_after_action
+for _action in ("apply","extract_primary","dedupe","reset","only_errors","export","clear_conditions","remove_condition","add_condition","commit_import"):
+    setattr(App,_action,refresh_after_action(getattr(App,_action)))
 
 if __name__=="__main__":App().mainloop()

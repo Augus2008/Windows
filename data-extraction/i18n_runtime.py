@@ -44,6 +44,7 @@ def apply_language(self):
         op.configure(values=t["ops"]);op.set(t["ops"][idx])
         val.configure(placeholder_text=t["condition_value"])
     self.refresh_localized_state()
+    self.refresh_workbench()
 
 def refresh_localized_state(self):
     t = TEXT[self.lang]
