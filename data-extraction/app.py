@@ -4,23 +4,25 @@ from pathlib import Path
 import csv, re
 import pandas as pd
 import customtkinter as ctk
+from window_theme import BrandedToplevel
 from i18n import TEXT
 from i18n_runtime import tr, show_about, language_action, apply_language, refresh_localized_state
 from chart_dialog import open_chart_dialog
 from batch_ui import BatchImportMixin
 from batch_io import enrich_fields
 from workbench_ui import WorkbenchMixin
+from help_ui import HelpMixin
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.15.1"
-BUILD_DATE = "2026-10-26"
+APP_VERSION = "0.15.2"
+BUILD_DATE = "2026-10-27"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
-class App(WorkbenchMixin, BatchImportMixin, ctk.CTk):
+class App(HelpMixin, WorkbenchMixin, BatchImportMixin, ctk.CTk):
     tr = tr
     show_about = show_about
     language_action = language_action
@@ -31,58 +33,8 @@ class App(WorkbenchMixin, BatchImportMixin, ctk.CTk):
         self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1360x820"); self.minsize(1080, 680)
         self.audit = None; self.source_record_column = None; self.paths = []; self.source_file_column = None; self.source = self.result = None; self.path = None; self.conditions = []; self.visible = {}; self.lang = "zh"; self.language_option_buttons = []; self.chart_settings = None; self.app_version = APP_VERSION; self.build_date = BUILD_DATE
-        self._style(); self._ui(); self.apply_language()
-        self.bind("<Button-1>", self.close_language_menu_on_outside_click, add="+")
-        self.bind("<Escape>", lambda _e:self.close_language_menu(), add="+")
-
-    def show_language_menu(self):
-        if self.language_popup is not None and self.language_popup.winfo_exists():
-            self.close_language_menu()
-            return
-        self.update_idletasks()
-        width = self.language_btn.winfo_width()
-        height = 92
-        x = self.language_btn.winfo_rootx()
-        y = self.language_btn.winfo_rooty() - height - 6
-        popup = tk.Toplevel(self)
-        popup.overrideredirect(True)
-        popup.attributes("-topmost", True)
-        popup.configure(bg="#F5F7FA")
-        popup.geometry(f"{width}x{height}+{x}+{y}")
-        self.language_popup = popup
-        self.language_option_buttons = []
-        panel = ctk.CTkFrame(popup, fg_color="#FFFFFF", corner_radius=10, border_width=1, border_color="#E3E8F0")
-        panel.pack(fill="both", expand=True)
-        for code, label, choice in (("zh", "中文", "中文"), ("en", "English", "English")):
-            selected = self.lang == code
-            button = ctk.CTkButton(panel, text=("✓  " if selected else "    ") + label, height=38, corner_radius=7, anchor="w", fg_color="#DBEAFE" if selected else "transparent", hover_color="#EDF1F7", text_color="#172B4D", font=(self.ui_font, 12, "bold" if selected else "normal"), command=lambda c=choice:self.select_language(c))
-            self.language_option_buttons.append(button)
-            button.pack(fill="x", padx=6, pady=(6,0) if code == "zh" else (2,6))
-        popup.bind("<Escape>", lambda _e:self.close_language_menu())
-
-
-    def close_language_menu_on_outside_click(self, event):
-        popup = self.language_popup
-        if popup is None or not popup.winfo_exists(): return
-        x, y = event.x_root, event.y_root
-        inside_popup = popup.winfo_rootx() <= x < popup.winfo_rootx()+popup.winfo_width() and popup.winfo_rooty() <= y < popup.winfo_rooty()+popup.winfo_height()
-        inside_button = self.language_btn.winfo_rootx() <= x < self.language_btn.winfo_rootx()+self.language_btn.winfo_width() and self.language_btn.winfo_rooty() <= y < self.language_btn.winfo_rooty()+self.language_btn.winfo_height()
-        if not inside_popup and not inside_button: self.close_language_menu()
-
-    def select_language(self, choice):
-        self.language_action(choice)
-        self.close_language_menu()
-
-    def close_language_menu(self):
-        popup = self.language_popup
-        if popup is not None:
-            try:
-                if popup.winfo_exists(): popup.destroy()
-            except tk.TclError:
-                pass
-        self.language_popup = None
-        self.language_option_buttons = []
-
+        self._style(); self._ui(); self.init_help(); self.apply_language()
+        self.bind('<Escape>',lambda e:self.help_menu.unpost(),add='+')
 
     def load_text(self,p):
         lines=None
@@ -291,7 +243,7 @@ class App(WorkbenchMixin, BatchImportMixin, ctk.CTk):
         menu=tk.Menu(self,tearoff=0);menu.add_command(label=self.tr("copy_cell"),command=self.copy_cell);menu.add_command(label=self.tr("copy_rows"),command=self.copy_selection);menu.tk_popup(event.x_root,event.y_root)
     def columns(self):
         if self.result is None:return
-        w=ctk.CTkToplevel(self);w.title(self.tr("select_columns_title"));w.geometry("430x560");w.transient(self);w.grab_set();ctk.CTkLabel(w,text=self.tr("select_columns"),font=("Microsoft YaHei UI",18,"bold")).pack(pady=(20,10));f=ctk.CTkScrollableFrame(w);f.pack(fill="both",expand=True,padx=20,pady=8);vs={}
+        w=BrandedToplevel(self);w.title(self.tr("select_columns_title"));w.geometry("430x560");w.transient(self);w.grab_set();ctk.CTkLabel(w,text=self.tr("select_columns"),font=("Microsoft YaHei UI",18,"bold")).pack(pady=(20,10));f=ctk.CTkScrollableFrame(w);f.pack(fill="both",expand=True,padx=20,pady=8);vs={}
         for c in self.result.columns:
             v=tk.BooleanVar(value=self.visible.get(c,True));vs[c]=v;ctk.CTkCheckBox(f,text=c,variable=v).pack(anchor="w",padx=10,pady=5)
         def save():

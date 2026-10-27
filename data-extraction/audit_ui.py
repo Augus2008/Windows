@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
+from window_theme import BrandedToplevel
 from audit_ledger import save_report, export_identity
 
 def controls(app):
@@ -31,7 +32,7 @@ def open_report(app):
     if not app.audit:
         messagebox.showinfo(app.tr('info'),app.tr('export_first')); return
     import json
-    window=ctk.CTkToplevel(app); window.title(app.tr('audit_title'))
+    window=BrandedToplevel(app); window.title(app.tr('audit_title'))
     window.geometry('980x650'); window.transient(app)
     text=ctk.CTkTextbox(window,wrap='none'); text.pack(fill='both',expand=True,padx=12,pady=12)
     data=report(app)

@@ -5,6 +5,7 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
+from window_theme import BrandedToplevel
 from audit_ledger import AuditLedger
 from batch_io import load_selection, ImportCancelled, enrich_fields
 
@@ -24,7 +25,7 @@ class BatchImportMixin:
             return
         self._import_busy = True
         self.import_btn.configure(state='disabled')
-        window = ctk.CTkToplevel(self)
+        window = BrandedToplevel(self)
         window.title(self.tr('batch_loading'))
         window.geometry('470x180')
         window.transient(self)

@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk, font as tkfont
 import customtkinter as ctk
 import pandas as pd
+from window_theme import apply_application_icon
 BG = '#F5F7FA'
 INK = '#172B4D'
 MUTED = '#66788A'
@@ -12,17 +13,6 @@ BORDER = '#E3E8F0'
 BLUE = '#2563EB'
 NEUTRAL = '#EDF1F7'
 
-def make_brand_icon():
-    """Supersampled table/filter mark, generated in memory without asset files."""
-    from PIL import Image, ImageDraw
-    im=Image.new('RGBA',(152,152),(0,0,0,0)); d=ImageDraw.Draw(im)
-    d.rounded_rectangle((0,0,151,151),radius=32,fill='#DBEAFE')
-    d.rounded_rectangle((29,30,115,119),radius=10,fill='white',outline=BLUE,width=7)
-    d.rectangle((32,34,112,53),fill=BLUE)
-    for y in (75,96):d.line((33,y,111,y),fill='#93B4EE',width=4)
-    d.line((60,56,60,114),fill='#93B4EE',width=4)
-    d.polygon([(72,67),(137,67),(114,94),(114,121),(97,131),(97,94)],fill=BLUE,outline='white',width=5)
-    return ctk.CTkImage(light_image=im,dark_image=im,size=(38,38))
 
 
 class WorkbenchMixin:
@@ -51,11 +41,7 @@ class WorkbenchMixin:
         self.grid_columnconfigure(1,weight=1); self.grid_rowconfigure(0,weight=1)
         self.sidebar = side = ctk.CTkFrame(self,width=248,corner_radius=0,fg_color='#F0F4F9',border_width=1,border_color=BORDER)
         side.grid(row=0,column=0,sticky='nsew'); side.grid_propagate(False)
-        brand=ctk.CTkFrame(side,fg_color='transparent'); brand.pack(fill='x',padx=18,pady=(24,8))
-        self.brand_icon_image=make_brand_icon()
-        self.brand_icon=ctk.CTkLabel(brand,text='',image=self.brand_icon_image,width=38,height=38)
-        self.brand_icon.pack(side='left',padx=(0,10))
-        self.brand_label=self.label(brand,bold=True); self.brand_label.pack(anchor='w')
+        apply_application_icon(self)
         self.source_label=self.label(side,bold=True); self.source_label.pack(anchor='w',padx=20,pady=(24,8))
         self.import_btn=self.button(side,self.import_file); self.import_btn.pack(fill='x',padx=18)
         self.file=self.label(side,wraplength=205,justify='left'); self.file.pack(fill='x',padx=20,pady=(10,8))
@@ -64,11 +50,8 @@ class WorkbenchMixin:
         self.source_file_items=[]; self._manifest_signature=None
         self.sheet=ctk.CTkComboBox(side,values=[''],state='readonly',command=self.change_sheet,height=32,width=206)
         self.sheet.pack(fill='x',padx=18,pady=(8,10))
-        self.language_popup=None
         self.clear_all_btn=self.button(side,self.clear_all_data); self.clear_all_btn.configure(text_color='#B42332')
         self.clear_all_btn.pack(side='bottom',fill='x',padx=18,pady=(6,18))
-        self.about_btn=self.button(side,self.show_about); self.about_btn.pack(side='bottom',fill='x',padx=18,pady=3)
-        self.language_btn=self.button(side,self.show_language_menu); self.language_btn.pack(side='bottom',fill='x',padx=18,pady=3)
         self.main=main=ctk.CTkFrame(self,fg_color='transparent',corner_radius=0)
         main.grid(row=0,column=1,sticky='nsew',padx=20,pady=16)
         main.grid_columnconfigure(0,weight=1); main.grid_rowconfigure(5,weight=1)
@@ -76,6 +59,7 @@ class WorkbenchMixin:
         self.status=self.label(head,bold=True,anchor='w'); self.status.grid(row=0,column=0,sticky='ew')
         self.meta=self.label(head,anchor='w'); self.meta.configure(text_color=MUTED); self.meta.grid(row=1,column=0,sticky='ew')
         out=ctk.CTkFrame(head,fg_color='transparent'); out.grid(row=0,column=1,rowspan=2,sticky='e',padx=(10,0))
+        self.help_btn=self.button(out,self.show_help_menu,width=90);self.help_btn.configure(height=26);self.help_btn.grid(row=0,column=1,sticky='e')
         self.export_label=self.label(out); self.export_label.grid(row=0,column=0,padx=6,sticky='w')
         self.fmt=ctk.CTkSegmentedButton(out,values=['Excel','CSV','TXT'],width=160,height=30,selected_color='#DBEAFE',selected_hover_color='#BFDBFE',text_color=INK,unselected_color=NEUTRAL)
         self.fmt.configure(border_width=0,fg_color=NEUTRAL); self.fmt.set('Excel'); self.fmt.grid(row=1,column=0,padx=(0,10))
@@ -88,8 +72,8 @@ class WorkbenchMixin:
             stats.grid_columnconfigure(i,weight=1,uniform='stats')
             card=ctk.CTkFrame(stats,fg_color='white',border_width=1,border_color=BORDER,corner_radius=8)
             card.grid(row=0,column=i,sticky='ew',padx=(0,8) if i<2 else 0)
-            title=self.label(card); title.pack(anchor='w',padx=14,pady=(8,0))
-            value=self.label(card,bold=True); value.configure(font=(self.ui_font,22,'bold')); value.pack(anchor='w',padx=14,pady=(0,8))
+            title=self.label(card,anchor='center',justify='center'); title.pack(fill='x',padx=14,pady=(8,0))
+            value=self.label(card,bold=True,anchor='center',justify='center'); value.configure(font=(self.ui_font,22,'bold')); value.pack(fill='x',padx=14,pady=(0,8))
             self.stat_labels.append(title); self.stat_values.append(value)
         search=ctk.CTkFrame(main,fg_color='transparent'); search.grid(row=2,column=0,sticky='ew'); search.grid_columnconfigure(1,weight=1)
         self.search_caption=self.label(search)
@@ -163,7 +147,7 @@ class WorkbenchMixin:
     def refresh_workbench(self):
         if not hasattr(self,'stat_values'):return
         self.title(f'{self.tr("app_name")} v{self.app_version} - {self.tr("wb_preview")}')
-        for widget,key in ((self.search_caption,'wb_search_hint'),(self.brand_label,'app_name'),(self.pending_label,'wb_pending'),(self.empty_import_btn,'wb_import')):
+        for widget,key in ((self.search_caption,'wb_search_hint'),(self.pending_label,'wb_pending'),(self.empty_import_btn,'wb_import')):
             widget.configure(text=self.tr(key))
         self.import_btn.configure(text=self.tr('wb_import'))
         self.show_filter_panel(self.filter_panel_open)

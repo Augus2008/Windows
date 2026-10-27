@@ -104,3 +104,6 @@ TEXT['en'].update({
 
 TEXT['zh']['wb_search_hint']='搜索全部列'
 TEXT['en']['wb_search_hint']='Search all columns'
+
+TEXT["zh"].update({"help":"帮助","help_guide":"使用指南","help_hint":"按操作顺序阅读；所有数据均在本机处理。","help_close":"关闭"})
+TEXT["en"].update({"help":"Help","help_guide":"User guide","help_hint":"Follow the steps below. All data is processed locally.","help_close":"Close"})

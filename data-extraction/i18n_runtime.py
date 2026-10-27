@@ -5,7 +5,7 @@ def tr(self, key, **kwargs):
     return TEXT[self.lang][key].format(**kwargs)
 
 def show_about(self):
-    messagebox.showinfo(self.tr("about_title"), self.tr("about_body", version=self.app_version, date=self.build_date))
+    return self.open_about()
 
 def language_action(self, choice):
     if choice not in ("中文","English"):return
@@ -20,8 +20,7 @@ def apply_language(self):
     self.export_btn.configure(text=t["export"])
     self.chart_btn.configure(text=t["chart_export"])
     self.audit_btn.configure(text=t["audit_title"])
-    self.about_btn.configure(text=t["about"])
-    self.language_btn.configure(text=t["language_menu"])
+    self.refresh_help_language()
     self.advanced_label.configure(text=t["advanced"])
     self.add_btn.configure(text=t["add"])
     self.clear_btn.configure(text=t["clear"])

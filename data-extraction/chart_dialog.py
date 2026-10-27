@@ -5,6 +5,7 @@ import tempfile
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
+from window_theme import BrandedToplevel
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as ExcelImage
@@ -57,7 +58,7 @@ def representative_indices(series_values, max_points=MAX_CHART_POINTS):
         ordered=sorted(selected);selected={ordered[round(i*(len(ordered)-1)/(max_points-1))] for i in range(max_points)}
     return sorted(selected)
 
-class ChartDialog(ctk.CTkToplevel):
+class ChartDialog(BrandedToplevel):
     def __init__(self, parent, data, lang='zh', source_name='', settings=None):
         super().__init__(parent)
         self.data = data.copy(); self.lang = lang; self.source_name = source_name; self.parent_app = parent; self.initial_settings = settings or {}

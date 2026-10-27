@@ -100,7 +100,7 @@ class WorkbenchTests(unittest.TestCase):
                 a.geometry(geometry); a.lang=lang; a.apply_language(); self.pump()
                 self.assertGreater(a.table_panel.winfo_height()/a.winfo_height(),.40)
                 self.assertGreater(a.tree.winfo_width(),600)
-                for b in (a.export_btn,a.fmt,a.filter_toggle,a.search_btn,a.dedupe_btn,a.reextract_btn,a.restore_btn,a.colmenu,a.chart_btn,a.audit_btn,a.language_btn,a.about_btn,a.clear_all_btn):self.assert_inside(b)
+                for b in (a.export_btn,a.fmt,a.filter_toggle,a.search_btn,a.dedupe_btn,a.reextract_btn,a.restore_btn,a.colmenu,a.chart_btn,a.audit_btn,a.help_btn,a.clear_all_btn):self.assert_inside(b)
 
     def test_many_filters_bounded_and_expand_collapse(self):
         self.commit(self.csv('many.csv',x=[1,2,3])); a=self.app
@@ -184,14 +184,15 @@ class WorkbenchTests(unittest.TestCase):
         a.result.loc[a.result.index[0],'name']='changed'; a.refresh()
         self.assertEqual(self.text(a.verification_label),a.tr('wb_not_exported'))
 
-    def test_brand_icon_without_subtitle(self):
+    def test_titlebar_icon_without_sidebar_brand(self):
         a=self.app
         for lang in ('中文','English'):
             a.language_action(lang);a.update_idletasks();a.update()
-            self.assertFalse(hasattr(a,'brand_subtitle'))
-            self.assertEqual(a.brand_icon.cget('text'),'')
-            self.assertTrue(a.brand_icon.winfo_ismapped())
-            self.assertEqual(a.brand_icon_image.cget('size'),(38,38))
-            self.assertEqual(a.brand_label.cget('text'),a.tr('app_name'))
+            for n in ('brand_subtitle','brand_icon','brand_label','language_btn','about_btn'):
+                self.assertFalse(hasattr(a,n))
+            self.assertEqual(len(a._application_icon_images),5)
+            self.assertTrue(a._iconbitmap_method_called)
+            self.assertIn(a.tr('app_name'),a.title())
+            self.assertLess(a.source_label.winfo_y(),40)
 
 if __name__=='__main__':unittest.main()
