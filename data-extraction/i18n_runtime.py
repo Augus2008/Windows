@@ -16,7 +16,6 @@ def apply_language(self):
     self.title(f"{t['app_name']} v{self.app_version}")
     self.import_btn.configure(text=t["import_auto"])
     self.source_label.configure(text=t["source"])
-    self.export_label.configure(text=t["export_format"])
     self.export_btn.configure(text=t["export"])
     self.chart_btn.configure(text=t["chart_export"])
     self.audit_btn.configure(text=t["audit_title"])

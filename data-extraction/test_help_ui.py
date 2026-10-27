@@ -31,7 +31,7 @@ class HelpUITests(unittest.TestCase):
         a.help_menu.invoke(0);self.pump();w=a.help_window;self.icon(w)
         self.assertEqual(a.help_textbox.get('1.0','end').strip(),help_text('zh'))
         a.help_language_menu.invoke(1);self.pump()
-        self.assertEqual(a.lang,'en');self.assertEqual(a.help_btn.cget('text'),'Help')
+        self.assertEqual(a.lang,'en');self.assertEqual(a.menubar.entrycget(0,'label'),'Help')
         self.assertEqual(a.help_textbox.get('1.0','end').strip(),help_text('en'))
         a.help_menu.invoke(3);self.pump();self.icon(a.about_window)
         self.assertIn(a.app_version,a.about_body.cget('text'))
@@ -41,12 +41,13 @@ class HelpUITests(unittest.TestCase):
         self.assertEqual(a.audit.__dict__,audit)
         a.help_close.invoke();a.open_usage();self.pump();self.icon(a.help_window)
 
-    def test_source_at_top_stats_centered_and_help_top_right(self):
+    def test_source_at_top_stats_centered_and_native_menu(self):
         a=self.a
         for size in ('1360x820','1080x680'):
             a.geometry(size);self.pump()
             self.assertLess(a.source_label.winfo_y(),40)
-            self.assertLess(a.help_btn.winfo_rooty()-a.winfo_rooty(),55)
+            self.assertEqual(str(a.cget('menu')),str(a.menubar))
+            self.assertFalse(hasattr(a,'help_btn'))
             for w in a.stat_labels+a.stat_values:
                 self.assertEqual(w.cget('anchor'),'center')
                 self.assertEqual(w.cget('justify'),'center')

@@ -53,6 +53,9 @@ class WorkbenchTests(unittest.TestCase):
         self.assertFalse(a.filter_panel_open); self.assertTrue(a.empty_state.winfo_ismapped())
         self.assertFalse(a.tree.get_children())
         self.assertEqual(set(TEXT['zh']),set(TEXT['en']))
+        self.assertFalse(a.status.winfo_ismapped())
+        self.assertFalse(a.meta.winfo_ismapped())
+        self.assertFalse(hasattr(a,'export_label'))
 
     def test_manifest_includes_zero_rows_and_replaces(self):
         a=self.app
@@ -100,7 +103,7 @@ class WorkbenchTests(unittest.TestCase):
                 a.geometry(geometry); a.lang=lang; a.apply_language(); self.pump()
                 self.assertGreater(a.table_panel.winfo_height()/a.winfo_height(),.40)
                 self.assertGreater(a.tree.winfo_width(),600)
-                for b in (a.export_btn,a.fmt,a.filter_toggle,a.search_btn,a.dedupe_btn,a.reextract_btn,a.restore_btn,a.colmenu,a.chart_btn,a.audit_btn,a.help_btn,a.clear_all_btn):self.assert_inside(b)
+                for b in (a.export_btn,a.filter_toggle,a.search_btn,a.dedupe_btn,a.reextract_btn,a.restore_btn,a.colmenu,a.chart_btn,a.audit_btn,a.clear_all_btn):self.assert_inside(b)
 
     def test_many_filters_bounded_and_expand_collapse(self):
         self.commit(self.csv('many.csv',x=[1,2,3])); a=self.app
