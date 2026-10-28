@@ -1,4 +1,9 @@
 import re
+import math
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
+import numpy as np
+from matplotlib.dates import date2num
 from collections import Counter
 from pathlib import Path
 import tempfile
@@ -10,18 +15,21 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as ExcelImage
 from matplotlib.figure import Figure
-from matplotlib import rcParams
-rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "Arial Unicode MS", "DejaVu Sans"]
+from matplotlib import rcParams, rc_context
+from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator, FuncFormatter
+rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "Arial Unicode MS", "WenQuanYi Zen Hei", "DejaVu Sans"]
 rcParams["axes.unicode_minus"] = False
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-MAX_CHART_POINTS = 5000
 NUMBER_UNIT_RE = re.compile(r'^\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*(.*?)\s*$')
 
 def parse_numeric_unit(value):
     if value is None or pd.isna(value): return None, ''
     m = NUMBER_UNIT_RE.match(str(value).replace(',', ''))
-    return (float(m.group(1)), m.group(2).strip()) if m else (None, '')
+    if not m: return None, ''
+    number = float(m.group(1))
+    return (number, m.group(2).strip()) if math.isfinite(number) else (None, '')
 
 def analyze_series(series):
     parsed = [parse_numeric_unit(v) for v in series]
@@ -31,32 +39,29 @@ def analyze_series(series):
 UNIT_SCALE = {'uV':('voltage',1e-6),'µV':('voltage',1e-6),'mV':('voltage',1e-3),'V':('voltage',1.0),'kV':('voltage',1e3),'uA':('current',1e-6),'µA':('current',1e-6),'mA':('current',1e-3),'A':('current',1.0),'%':('percent',1.0),'°C':('temperature',1.0),'℃':('temperature',1.0)}
 
 def convert_series(parsed, detected_unit, target_unit):
-    target=target_unit.strip();converted=[]
+    target=target_unit.strip() or detected_unit;converted=[]
     for number,source in parsed:
         if number is None: converted.append(None);continue
         source=source or detected_unit
         if not target or not source or source==target: converted.append(number);continue
         src,dst=UNIT_SCALE.get(source),UNIT_SCALE.get(target)
         if src and dst and src[0]==dst[0]: converted.append(number*src[1]/dst[1])
-        elif target not in UNIT_SCALE: converted.append(number)
+        elif target not in UNIT_SCALE and (source == detected_unit or
+                (src and UNIT_SCALE.get(detected_unit) and src[0] == UNIT_SCALE[detected_unit][0])):
+            converted.append(number)  # Explicit custom label only; never invent a conversion.
         else: converted.append(None)
-    return converted
+    return [n if n is not None and math.isfinite(n) else None for n in converted]
 
-def representative_indices(series_values, max_points=MAX_CHART_POINTS):
-    length = max((len(v) for v in series_values), default=0)
-    if length <= max_points: return list(range(length))
-    valid_series = [[x if x is not None else float('nan') for x in values] for values in series_values]
-    edge = max(2, max_points // max(1, len(valid_series)*2))
-    bucket_count = max(1, edge-1); selected={0,length-1}
-    for bucket in range(bucket_count):
-        start=1+(length-2)*bucket//bucket_count;end=1+(length-2)*(bucket+1)//bucket_count
-        if end<=start:continue
-        for values in valid_series:
-            valid=[i for i in range(start,end) if values[i]==values[i]]
-            if valid:selected.add(min(valid,key=lambda i:values[i]));selected.add(max(valid,key=lambda i:values[i]))
-    if len(selected)>max_points:
-        ordered=sorted(selected);selected={ordered[round(i*(len(ordered)-1)/(max_points-1))] for i in range(max_points)}
-    return sorted(selected)
+class FullLine(Line2D):
+    """Keep all vertices, including after set_data, recache and export."""
+    def recache(self, always=False):
+        super().recache(always)
+        self._path.should_simplify = False
+        self._subslice = False
+
+    def draw(self, renderer):
+        with rc_context({'path.simplify': False, 'agg.path.chunksize': 0}):
+            super().draw(renderer)
 
 class ChartDialog(BrandedToplevel):
     def __init__(self, parent, data, lang='zh', source_name='', settings=None):
@@ -65,8 +70,8 @@ class ChartDialog(BrandedToplevel):
         self.title('图表设置与预览' if lang=='zh' else 'Chart Settings & Preview')
         self.geometry('1180x760'); self.minsize(980,650); self.transient(parent)
         self.protocol('WM_DELETE_WINDOW', self.request_close)
-        self.series = {}; self.dirty = False
-        self._build(); self.apply_settings(self.initial_settings); self.snapshot = self.collect_settings(); self.after(120, self.refresh_preview)
+        self.series = {}; self.dirty = False; self._preview_after = None; self.last_stats = {}
+        self._build(); self.apply_settings(self.initial_settings); self.snapshot = self.collect_settings(); self.schedule_preview()
 
     def _build(self):
         self.grid_columnconfigure(1,weight=1); self.grid_rowconfigure(0,weight=1)
@@ -89,7 +94,8 @@ class ChartDialog(BrandedToplevel):
         self.grid_var=tk.BooleanVar(value=True);self.legend_var=tk.BooleanVar(value=True)
         ctk.CTkCheckBox(left,text='显示网格' if zh else 'Show grid',variable=self.grid_var,command=self.refresh_preview).pack(anchor='w',padx=12,pady=(12,5))
         ctk.CTkCheckBox(left,text='显示图例' if zh else 'Show legend',variable=self.legend_var,command=self.refresh_preview).pack(anchor='w',padx=12,pady=5)
-        self.stats=ctk.CTkLabel(right,text='',text_color='#475569');self.stats.grid(row=0,column=0,sticky='w',padx=18,pady=(12,2))
+        self.stats=ctk.CTkLabel(right,text='',text_color='#475569',wraplength=400,justify='left');self.stats.grid(row=0,column=0,sticky='w',padx=18,pady=(12,2))
+        right.bind('<Configure>', lambda e: self.stats.configure(wraplength=max(120, e.width-36)))
         self.figure=Figure(figsize=(8,5),dpi=100);self.canvas=FigureCanvasTkAgg(self.figure,master=right);self.canvas.get_tk_widget().grid(row=1,column=0,sticky='nsew',padx=10,pady=8)
         actions=ctk.CTkFrame(right,fg_color='transparent');actions.grid(row=2,column=0,sticky='e',padx=14,pady=(0,12))
         ctk.CTkButton(actions,text='刷新预览' if zh else 'Refresh',command=self.refresh_preview,fg_color='#0f766e').pack(side='left',padx=5)
@@ -97,7 +103,7 @@ class ChartDialog(BrandedToplevel):
         ctk.CTkButton(actions,text='关闭' if zh else 'Close',command=self.request_close,fg_color='#64748b').pack(side='left',padx=5)
 
     def _entry(self,parent,label,var):
-        ctk.CTkLabel(parent,text=label,text_color='#475569').pack(anchor='w',padx=10,pady=(5,2));e=ctk.CTkEntry(parent,textvariable=var);e.pack(fill='x',padx=10,pady=(0,7));e.bind('<KeyRelease>',lambda _e:self.after(120,self.refresh_preview));return e
+        ctk.CTkLabel(parent,text=label,text_color='#475569').pack(anchor='w',padx=10,pady=(5,2));e=ctk.CTkEntry(parent,textvariable=var);e.pack(fill='x',padx=10,pady=(0,7));e.bind('<KeyRelease>',lambda _e:self.schedule_preview());return e
     def _option(self,parent,label,var,values):
         ctk.CTkLabel(parent,text=label,text_color='#475569').pack(anchor='w',padx=10,pady=(5,2));ctk.CTkOptionMenu(parent,variable=var,values=values,command=lambda _v:self.refresh_preview()).pack(fill='x',padx=10,pady=(0,7))
     def axis_label(self,item):
@@ -106,37 +112,158 @@ class ChartDialog(BrandedToplevel):
     def plotting_data(self):
         chosen=self.selected();record_label='记录序号' if self.lang=='zh' else 'Record index';xchoice=self.x_axis.get();xdata=list(range(1,len(self.data)+1)) if xchoice==record_label or xchoice not in self.data.columns else list(self.data[xchoice])
         converted=[convert_series(item['parsed'],item['detected_unit'],item['unit'].get()) for _,item in chosen]
-        indices=representative_indices(converted,MAX_CHART_POINTS)
-        rows=[]
-        for idx in indices:
-            values=[series[idx] for series in converted]
-            if any(value is not None for value in values):rows.append((xdata[idx],values,idx))
-        return chosen,rows
+        rows = [(xdata[idx], [values[idx] for values in converted], idx)
+                for idx in range(len(self.data))]
+        return chosen, rows
 
-    def draw(self):
-        chosen,rows=self.plotting_data()
-        if not chosen: raise ValueError('请至少选择一个数据系列。' if self.lang=='zh' else 'Select at least one series.')
-        self.figure.clear();ax=self.figure.add_subplot(111);axes=[ax]
-        if len(chosen)>1: axes.append(ax.twinx())
-        lines=[];ctype=self.chart_type.get().lower()
-        for series_index,(key,item) in enumerate(chosen):
-            target=axes[min(series_index,len(axes)-1)];points=[(x,values[series_index]) for x,values,_ in rows if values[series_index] is not None]
-            if points:
-                xs,ys=zip(*points)
-                if '散点' in ctype or 'scatter' in ctype: line=target.scatter(xs,ys,color=item['color'],s=20,label=item['name'].get())
-                else:
-                    marker='o' if ('数据点' in ctype or 'marker' in ctype) else None
-                    line,=target.plot(xs,ys,color=item['color'],linewidth=1.8,marker=marker,markersize=4,label=item['name'].get())
-                lines.append(line)
-            target.set_ylabel(self.axis_label(item),color=item['color']);target.tick_params(axis='y',labelcolor=item['color'])
-        xchoice=self.x_axis.get();ax.set_xlabel(self.x_name.get().strip() or xchoice);ax.set_title(self.title_var.get().strip());ax.grid(self.grid_var.get(),color='#94a3b8',alpha=.42,linewidth=.75)
-        if self.legend_var.get() and lines:ax.legend(lines,[x.get_label() for x in lines],loc='upper center',bbox_to_anchor=(0.5,-0.13),ncol=max(1,len(lines)),frameon=False)
-        self.figure.tight_layout(rect=[0,0.12,1,1]);return len(rows),len(self.data)-len(rows)
-    def refresh_preview(self):
+    @staticmethod
+    def _missing(value):
+        return value is None or bool(pd.isna(value)) or (isinstance(value, str) and not value.strip())
+
+    @staticmethod
+    def _requires_text_x(value):
+        if not isinstance(value, (str, int, np.integer)): return False
         try:
-            valid,skipped=self.draw();self.canvas.draw_idle();self.stats.configure(text=(f'提取结果：{len(self.data):,} 条  ·  实际绘图：{valid:,} 条  ·  未参与绘图：{skipped:,} 条' if self.lang=='zh' else f'Extracted: {len(self.data):,}  ·  Plotted: {valid:,}  ·  Not plotted: {skipped:,}'))
-        except (tk.TclError,ValueError) as e:
-            if self.winfo_exists(): self.stats.configure(text=str(e))
+            number = Decimal(str(value).strip())
+            return number.is_finite() and number == number.to_integral_value() and (
+                abs(number) >= 10**15 or bool(re.match(r'^[-+]?0\d', str(value))))
+        except InvalidOperation: return False
+
+    def _x_coordinates(self, rows):
+        raw = [x for x, _, _ in rows]
+        present = [x for x in raw if not self._missing(x)]
+        def numeric(x):
+            try: float(x); return True
+            except OverflowError: return True
+            except (TypeError, ValueError): return False
+        is_number = any(numeric(x) for x in present)
+        is_time = any(isinstance(x, (date, datetime, pd.Timestamp, np.datetime64)) or
+                      re.search(r'\d{1,4}[-/:]\d{1,2}[-/:]\d{1,4}', str(x)) for x in present)
+        if not is_number and any(t in self.x_axis.get().lower() for t in ('日期', '时间', 'date', 'time')):
+            is_time = True
+        self._text_x = any(self._requires_text_x(x) for x in present)
+        kind = 'category' if self._text_x else ('time' if is_time else ('number' if is_number else 'category'))
+        coords = []; categories = {}; reasons = Counter()
+        for value in raw:
+            reason = None; point = float('nan')
+            if self._missing(value): reason = 'missing_x'
+            elif str(value).strip().lower() in ('inf', '-inf', '+inf', 'infinity', '-infinity', '+infinity', 'nan'): reason = 'nonfinite_x'
+            elif kind == 'number':
+                try:
+                    point = float(value)
+                    if not math.isfinite(point): reason = 'nonfinite_x'
+                except (ValueError, TypeError, OverflowError): reason = 'invalid_numeric_x'
+            elif kind == 'time':
+                stamp = pd.to_datetime(value, errors='coerce')
+                if pd.isna(stamp): reason = 'invalid_time_x'
+                else: point = float(date2num(stamp.to_pydatetime()))
+            else:
+                label = str(value)
+                if label not in categories: categories[label] = len(categories)
+                point = categories[label]
+            if reason: reasons[reason] += 1; point = float('nan')
+            coords.append(point)
+        return np.asarray(coords, dtype=float), kind, categories, dict(reasons)
+
+    def _clear_chart(self):
+        self.figure.clear()
+        self.last_stats = {}
+        self.canvas.draw_idle()
+
+    def draw(self, prepared=None):
+        self._clear_chart()
+        chosen, rows = prepared if prepared is not None else self.plotting_data()
+        if not chosen:
+            raise ValueError('请至少选择一个数据系列。' if self.lang == 'zh' else 'Select at least one series.')
+        xs, kind, categories, reasons = self._x_coordinates(rows)
+        ys = [np.asarray([float('nan') if values[i] is None else values[i] for _, values, _ in rows])
+              for i in range(len(chosen))]
+        masks = [np.isfinite(xs) & np.isfinite(y) for y in ys]
+        valid = np.logical_or.reduce(masks) if rows else np.zeros(0, dtype=bool)
+        self.last_stats = {'total': len(self.data), 'included': len(rows),
+                           'valid': int(valid.sum()), 'invalid': int((~valid).sum()),
+                           'x_invalid': reasons}
+        self.last_stats['series'] = {key: int(mask.sum()) for (key, _), mask in zip(chosen, masks)}
+        self.last_stats['invalid_y'] = {key: int((~np.isfinite(y)).sum()) for (key, _), y in zip(chosen, ys)}
+        self.last_stats['incompatible_units'] = {
+            key: sum(n is not None and not math.isfinite(y[j]) and
+                     convert_series([(1.0, source)], item['detected_unit'], item['unit'].get()) == [None]
+                     for j, (n, source) in enumerate(item['parsed']))
+            for (key, item), y in zip(chosen, ys)}
+        if not valid.any():
+            raise ValueError(('没有有效坐标；' if self.lang == 'zh' else 'No valid coordinates; ') + self._stats_text())
+        ax = self.figure.add_subplot(111); axes = [ax]
+        if len(chosen) > 1: axes.append(ax.twinx())
+        lines = []; ctype = self.chart_type.get().lower()
+        for i, (key, item) in enumerate(chosen):
+            target = axes[min(i, len(axes)-1)]
+            if '散点' in ctype or 'scatter' in ctype:
+                line = target.scatter(xs, ys[i], color=item['color'], s=20, label=item['name'].get())
+            else:
+                marker = 'o' if ('数据点' in ctype or 'marker' in ctype) else None
+                line = FullLine(xs, ys[i], color=item['color'], linewidth=1.8, marker=marker,
+                                markersize=4, markevery=None, label=item['name'].get())
+                target.add_line(line); target.autoscale_view()
+            lines.append(line)
+            target.set_ylabel(self.axis_label(item), color=item['color'])
+            target.tick_params(axis='y', labelcolor=item['color'])
+        if kind == 'time': ax.xaxis_date()
+        if kind == 'category':
+            labels = list(categories)
+            if len(labels) <= 20: ax.set_xticks(list(categories.values()), labels)
+            else:
+                ax.xaxis.set_major_locator(MaxNLocator(nbins=10, integer=True))
+                ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: labels[round(x)] if 0 <= round(x) < len(labels) else ''))
+        ax.set_xlabel(self.x_name.get().strip() or self.x_axis.get())
+        ax.set_title(self.title_var.get().strip())
+        ax.grid(self.grid_var.get(), color='#94a3b8', alpha=.42, linewidth=.75)
+        if self.legend_var.get():
+            ax.legend(lines, [line.get_label() for line in lines], loc='upper center',
+                      bbox_to_anchor=(0.5, -0.13), ncol=max(1, len(lines)), frameon=False)
+        self.figure.tight_layout(rect=[0, 0.12, 1, 1])
+        return self.last_stats['valid'], self.last_stats['invalid']
+
+    def _stats_text(self):
+        s = self.last_stats
+        if not s: return ''
+        if self.lang == 'zh':
+            text = f"总结果：{s['total']:,} · 全量纳入：{s['included']:,} · 有效坐标记录：{s['valid']:,} · 不可绘制：{s['invalid']:,}"
+        else:
+            text = f"Total: {s['total']:,} · Included: {s['included']:,} · Valid coordinate records: {s['valid']:,} · Unplottable: {s['invalid']:,}"
+        details = []
+        for key, item in self.selected():
+            details.append(f"{item['name'].get()}: {s['series'][key]:,}" + (' 个有限点' if self.lang == 'zh' else ' finite points'))
+            bad = s['invalid_y'][key]; incompatible = s['incompatible_units'][key]
+            if bad:
+                details.append((f'缺失/非数值：{bad-incompatible:,}，单位不兼容：{incompatible:,}' if self.lang == 'zh'
+                                else f'Missing/non-numeric: {bad-incompatible:,}, incompatible units: {incompatible:,}'))
+            target = item['unit'].get().strip()
+            if target and target not in UNIT_SCALE and target != item['detected_unit']:
+                details.append('自定义单位仅重标，未换算' if self.lang == 'zh' else 'Custom unit label only; no conversion')
+        labels = {'missing_x': ('X缺失', 'Missing X'), 'nonfinite_x': ('X非有限', 'Non-finite X'),
+                  'invalid_numeric_x': ('X非数值', 'Non-numeric X'), 'invalid_time_x': ('X时间非法', 'Invalid X time')}
+        for reason, count in s['x_invalid'].items():
+            details.append(f"{labels[reason][0 if self.lang == 'zh' else 1]}: {count:,}")
+        return text + "\n" + ' · '.join(details)
+
+
+    def schedule_preview(self):
+        if self._preview_after is not None: self.after_cancel(self._preview_after)
+        self._preview_after = self.after(250, self.refresh_preview)
+
+    def refresh_preview(self):
+        if self._preview_after is not None:
+            self.after_cancel(self._preview_after); self._preview_after = None
+        try:
+            self.draw(); self.canvas.draw_idle(); self.stats.configure(text=self._stats_text())
+        except (tk.TclError, ValueError) as error:
+            if self.winfo_exists(): self.stats.configure(text=str(error))
+
+    def destroy(self):
+        if self._preview_after is not None:
+            self.after_cancel(self._preview_after); self._preview_after = None
+        super().destroy()
+
     def collect_settings(self):
         return {'title':self.title_var.get(),'chart_type':self.chart_type.get(),'x_axis':self.x_axis.get(),'x_name':self.x_name.get(),'grid':self.grid_var.get(),'legend':self.legend_var.get(),'series':{k:{'enabled':v['enabled'].get(),'name':v['name'].get(),'unit':v['unit'].get()} for k,v in self.series.items()}}
     def apply_settings(self, settings):
@@ -158,17 +285,31 @@ class ChartDialog(BrandedToplevel):
         self.destroy()
 
     def export_excel(self, path):
-        chosen,rows=self.plotting_data();wb=Workbook();chart_ws=wb.active;chart_ws.title='Chart Preview';data_ws=wb.create_sheet('Chart Data');xname=self.x_name.get().strip() or self.x_axis.get();data_ws.append([xname]+[self.axis_label(v) for _,v in chosen])
-        for x,values,_idx in rows:data_ws.append([x]+values)
-        data_ws.freeze_panes='A2';data_ws.auto_filter.ref=data_ws.dimensions
-        chart_ws['A1']=self.title_var.get().strip();chart_ws['A1'].font=chart_ws['A1'].font.copy(bold=True,size=16)
-        self.draw()
+        if len(self.data) > 1048575:
+            self._clear_chart()
+            raise ValueError('Excel row limit exceeded (1,048,575 data records plus header); no rows were truncated.')
+        chosen, rows = self.plotting_data()
+        self.draw((chosen, rows))
+        wb = Workbook(); chart_ws = wb.active; chart_ws.title = 'Chart Preview'
+        data_ws = wb.create_sheet('Chart Data')
+        xname = self.x_name.get().strip() or self.x_axis.get()
+        data_ws.append([xname] + [self.axis_label(v) for _, v in chosen] + ['Record idx (0-based)'])
+        for x, values, idx in rows:
+            if self._missing(x) or isinstance(x, (float, np.floating)) and not math.isfinite(x): x = None
+            if x is not None and self._text_x: x = str(x)
+            cells = [x] + values + [idx]
+            data_ws.append(cells)
+            for col, value in enumerate(cells, 1):
+                if isinstance(value, str): data_ws.cell(idx + 2, col).data_type = 's'
+        data_ws.freeze_panes = 'A2'; data_ws.auto_filter.ref = data_ws.dimensions
+        chart_ws['A1'] = self.title_var.get().strip()
+
         with tempfile.TemporaryDirectory() as temp_dir:
             image_path=Path(temp_dir)/'chart.png';self.figure.savefig(image_path,dpi=180,bbox_inches='tight',facecolor='white')
             image=ExcelImage(str(image_path));image.width=1100;image.height=650;chart_ws.add_image(image,'A3');wb.save(path)
 
     def export_chart(self):
-        if not self.selected(): messagebox.showwarning('提示' if self.lang=='zh' else 'Notice','请至少选择一个数据系列。' if self.lang=='zh' else 'Select at least one series.',parent=self);return
+        if not self.selected(): self._clear_chart(); messagebox.showwarning('提示' if self.lang=='zh' else 'Notice','请至少选择一个数据系列。' if self.lang=='zh' else 'Select at least one series.',parent=self);return
         p=filedialog.asksaveasfilename(parent=self,title='导出图表' if self.lang=='zh' else 'Export Chart',defaultextension='.png',initialfile=(Path(self.source_name).stem if self.source_name else 'chart')+'_chart.png',filetypes=[('PNG','*.png'),('Excel','*.xlsx'),('PDF','*.pdf'),('SVG','*.svg')])
         if not p:return
         try:

@@ -17,11 +17,19 @@ class HelpTests(unittest.TestCase):
    with self.assertRaises(ValueError):help_text(l)
  def test_limits(self):
   for l in S:
-   for token in ('500','5000','AND','OR','JSON','CSV','values','percent'):
+   for token in ('500','AND','OR','JSON','CSV','values','percent'):
     self.assertIn(token,help_text(l))
  def test_contracts(self):
   required={'zh':['首表','物理行号','区分大小写','点击应用','来源文件参与','手动保存','不覆盖','当时','线性','字面','路径','关于”菜单','软件信息'], 'en':['first sheet','physical line','case-sensitive','click Apply','Source file','manually','failure','at export time','linear','literal','paths','About includes','Software information']}
   for lang,tokens in required.items():
    for token in tokens:self.assertIn(token,help_text(lang))
+
+ def test_full_chart_contract(self):
+  zh=dict((i,b) for i,t,b in S['zh'])['chart']
+  en=dict((i,b) for i,t,b in S['en'])['chart']
+  self.assertIn('全部记录',zh);self.assertIn('不抽样、不截断',zh)
+  self.assertIn('every current-result record',en)
+  self.assertIn('without sampling or truncation',en)
+  for text in (zh,en):self.assertNotIn('5000',text)
 
 if __name__=='__main__':unittest.main()

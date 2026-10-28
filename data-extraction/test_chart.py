@@ -8,13 +8,14 @@ assert unit=="mV"
 assert convert_series(parsed,unit,"mV")[:2]==[4184.0,4170.0]
 assert convert_series(parsed,unit,"V")[:2]==[4.184,4.17]
 print("CHART_PARSER_TEST_OK")
-from chart_dialog import representative_indices, MAX_CHART_POINTS
-size=80645
-values=[float(i%1000) for i in range(size)];values[12345]=-9999.0;values[67890]=9999.0
-percent=[float((i//100)%101) for i in range(size)]
-indices=representative_indices([values,percent])
-assert len(indices)<=MAX_CHART_POINTS
-assert indices[0]==0 and indices[-1]==size-1
-assert 12345 in indices and 67890 in indices
-assert indices==sorted(set(indices))
-print("CHART_DOWNSAMPLE_TEST_OK",len(indices))
+for raw in ("inf", "-inf", "nan", "1e999V", float('inf'), float('nan')):
+    assert parse_numeric_unit(raw) == (None, ''), raw
+assert convert_series([(1.0, 'A'), (2.0, 'V')], 'V', 'mV') == [None, 2000.0]
+assert convert_series([(1.0, 'Pa')], 'Pa', 'V') == [None]
+from test_chart_full import make_dialog
+frame = pd.DataFrame({'values': ['1V', 'bad', None], 'percent': ['bad', None, '3%']})
+dialog = make_dialog(frame)
+_, rows = dialog.plotting_data()
+assert len(rows) == 3 and [r[2] for r in rows] == [0, 1, 2]
+assert rows[1][1] == [None, None]
+print('CHART_FULL_ROWS_TEST_OK')
