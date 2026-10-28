@@ -14,7 +14,7 @@ class HelpMixin:
 
     def refresh_help_language(self):
         if not hasattr(self,'help_menu'):return
-        self.help_btn.configure(text=self.tr('help'))
+        self.help_btn.configure(text=self.tr('about'))
         self.help_menu.delete(0,'end');self.help_language_menu.delete(0,'end')
         for label,lang,choice in [('中文','zh','中文'),('English','en','English')]:
             self.help_language_menu.add_radiobutton(label=label,variable=self.help_language_var,
@@ -23,7 +23,7 @@ class HelpMixin:
         self.help_menu.add_command(label=self.tr('help_guide'),command=self.open_usage)
         self.help_menu.add_cascade(label=self.tr('language_menu'),menu=self.help_language_menu)
         self.help_menu.add_separator()
-        self.help_menu.add_command(label=self.tr('about'),command=self.show_about)
+        self.help_menu.add_command(label=self.tr('software_info'),command=self.show_about)
         if self.help_window is not None and self.help_window.winfo_exists():
             self.help_window.title(self.tr('help_guide'))
             self.help_heading.configure(text=self.tr('help_guide'))

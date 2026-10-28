@@ -5,7 +5,7 @@ from app import App, APP_VERSION, BUILD_DATE
 from i18n import TEXT
 app=App();app.update_idletasks();app.update()
 assert not hasattr(app,"language_btn") and not hasattr(app,"about_btn")
-assert app.help_btn.cget("text")==TEXT["zh"]["help"]
+assert app.help_btn.cget("text")==TEXT["zh"]["about"]
 assert app.status.cget("text")==TEXT["zh"]["header_empty"]
 assert app.help_menu.entrycget(0,"label")==TEXT["zh"]["help_guide"]
 assert app.help_menu.entrycget(1,"label")==TEXT["zh"]["language_menu"]
@@ -13,7 +13,7 @@ assert app.export_btn.cget("text_color")=="#ffffff"
 assert "bold" in str(app.export_btn.cget("font")).lower()
 app.help_language_menu.invoke(1);app.update()
 assert app.lang=="en"
-assert app.help_btn.cget("text")==TEXT["en"]["help"]
+assert app.help_btn.cget("text")==TEXT["en"]["about"]
 assert app.chart_btn.cget("text")==TEXT["en"]["chart_export"]
 assert app.status.cget("text")==TEXT["en"]["header_empty"]
 assert not app.status.winfo_ismapped() and not app.meta.winfo_ismapped()

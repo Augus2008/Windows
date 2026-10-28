@@ -20,7 +20,7 @@ class HelpTests(unittest.TestCase):
    for token in ('500','5000','AND','OR','JSON','CSV','values','percent'):
     self.assertIn(token,help_text(l))
  def test_contracts(self):
-  required={'zh':['首表','物理行号','区分大小写','点击应用','来源文件参与','手动保存','不覆盖','当时','线性','字面','路径','帮助菜单'], 'en':['first sheet','physical line','case-sensitive','click Apply','Source file','manually','failure','at export time','linear','literal','paths','Help includes']}
+  required={'zh':['首表','物理行号','区分大小写','点击应用','来源文件参与','手动保存','不覆盖','当时','线性','字面','路径','关于”菜单','软件信息'], 'en':['first sheet','physical line','case-sensitive','click Apply','Source file','manually','failure','at export time','linear','literal','paths','About includes','Software information']}
   for lang,tokens in required.items():
    for token in tokens:self.assertIn(token,help_text(lang))
 
