@@ -198,4 +198,20 @@ class WorkbenchTests(unittest.TestCase):
             self.assertIn(a.tr('app_name'),a.title())
             self.assertLess(a.source_label.winfo_y(),40)
 
+    def test_compact_preview_toolbar_order_and_centering(self):
+        a=self.app
+        for size in ('1360x820','1080x680'):
+            for lang in ('zh','en'):
+                a.geometry(size);a.lang=lang;a.apply_language();self.pump()
+                for w in (a.preview_label,a.audit_btn,a.chart_btn,a.export_btn,a.help_btn):self.assert_inside(w)
+                self.assertEqual(str(a.cget('menu')),'')
+                self.assertLessEqual(a.stat_labels[0].master.winfo_rooty()-a.winfo_rooty(),16)
+                group=a.preview_actions;bar=a.preview_toolbar
+                self.assertLessEqual(abs(group.winfo_x()+group.winfo_width()/2-bar.winfo_width()/2),2)
+                self.assertLessEqual(a.preview_label.winfo_rootx()+a.preview_label.winfo_width(),a.audit_btn.winfo_rootx())
+                self.assertLessEqual(a.audit_btn.winfo_rootx()+a.audit_btn.winfo_width(),a.chart_btn.winfo_rootx())
+                self.assertLessEqual(a.chart_btn.winfo_rootx()+a.chart_btn.winfo_width(),a.export_btn.winfo_rootx())
+                self.assertGreater(a.help_btn.winfo_rooty(),a.clear_all_btn.winfo_rooty())
+                self.assertLessEqual(abs(a.help_btn.winfo_rooty()+a.help_btn.winfo_height()-a.winfo_rooty()-a.winfo_height()),14)
+
 if __name__=='__main__':unittest.main()

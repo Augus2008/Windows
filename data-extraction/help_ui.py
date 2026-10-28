@@ -7,17 +7,14 @@ from help_content import HELP_SECTIONS, help_text
 class HelpMixin:
     def init_help(self):
         self.help_window=None;self.about_window=None
-        self.menubar=tk.Menu(self,tearoff=False)
-        self.help_menu=tk.Menu(self.menubar,tearoff=False)
-        self.menubar.add_cascade(label=self.tr('help'),menu=self.help_menu)
-        self.configure(menu=self.menubar)
+        self.help_menu=tk.Menu(self,tearoff=False)
         self.help_language_menu=tk.Menu(self.help_menu,tearoff=False)
         self.help_language_var=tk.StringVar(self,value=self.lang)
         self.refresh_help_language()
 
     def refresh_help_language(self):
         if not hasattr(self,'help_menu'):return
-        self.menubar.entryconfigure(0,label=self.tr('help'))
+        self.help_btn.configure(text=self.tr('help'))
         self.help_menu.delete(0,'end');self.help_language_menu.delete(0,'end')
         for label,lang,choice in [('中文','zh','中文'),('English','en','English')]:
             self.help_language_menu.add_radiobutton(label=label,variable=self.help_language_var,
@@ -48,7 +45,10 @@ class HelpMixin:
 
     def show_help_menu(self):
         self.refresh_help_language();self.update_idletasks()
-        self.help_menu.tk_popup(self.winfo_rootx(),self.winfo_rooty())
+        x=self.help_btn.winfo_rootx()
+        y=self.help_btn.winfo_rooty()-self.help_menu.winfo_reqheight()
+        try:self.help_menu.tk_popup(x,max(self.winfo_rooty(),y))
+        finally:self.help_menu.grab_release()
     def open_usage(self):
         if self.help_window is not None and self.help_window.winfo_exists():
             self.help_window.deiconify();self.help_window.lift();return self.help_window

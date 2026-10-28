@@ -31,7 +31,7 @@ class HelpUITests(unittest.TestCase):
         a.help_menu.invoke(0);self.pump();w=a.help_window;self.icon(w)
         self.assertEqual(a.help_textbox.get('1.0','end').strip(),help_text('zh'))
         a.help_language_menu.invoke(1);self.pump()
-        self.assertEqual(a.lang,'en');self.assertEqual(a.menubar.entrycget(0,'label'),'Help')
+        self.assertEqual(a.lang,'en');self.assertEqual(a.help_btn.cget('text'),'Help')
         self.assertEqual(a.help_textbox.get('1.0','end').strip(),help_text('en'))
         a.help_menu.invoke(3);self.pump();self.icon(a.about_window)
         self.assertIn(a.app_version,a.about_body.cget('text'))
@@ -41,17 +41,40 @@ class HelpUITests(unittest.TestCase):
         self.assertEqual(a.audit.__dict__,audit)
         a.help_close.invoke();a.open_usage();self.pump();self.icon(a.help_window)
 
-    def test_source_at_top_stats_centered_and_native_menu(self):
+    def test_source_at_top_stats_centered_and_bottom_help(self):
         a=self.a
         for size in ('1360x820','1080x680'):
             a.geometry(size);self.pump()
             self.assertLess(a.source_label.winfo_y(),40)
-            self.assertEqual(str(a.cget('menu')),str(a.menubar))
-            self.assertFalse(hasattr(a,'help_btn'))
+            self.assertEqual(str(a.cget('menu')),'')
+            self.assertTrue(a.help_btn.winfo_ismapped())
+            self.assertGreater(a.help_btn.winfo_rooty(),a.clear_all_btn.winfo_rooty())
             for w in a.stat_labels+a.stat_values:
                 self.assertEqual(w.cget('anchor'),'center')
                 self.assertEqual(w.cget('justify'),'center')
                 self.assertLessEqual(abs(w.winfo_x()+w.winfo_width()/2-w.master.winfo_width()/2),2)
+    def test_bottom_help_button_posts_upward_within_window(self):
+        a=self.a
+        for lang in ('zh','en'):
+            a.lang=lang;a.apply_language();self.pump()
+            import sys
+            if sys.platform=='win32':
+                # A native Windows popup can enter an OS modal loop. Check the
+                # callback and coordinates here; X11 below exercises real post.
+                with patch.object(a.help_menu,'tk_popup') as popup:
+                    a.help_btn.invoke()
+                popup.assert_called_once()
+                x,y=popup.call_args.args
+                self.assertEqual(x,a.help_btn.winfo_rootx())
+                self.assertLessEqual(y,a.help_btn.winfo_rooty())
+                continue
+            a.help_btn.invoke();a.update()
+            self.assertTrue(a.help_menu.winfo_ismapped())
+            self.assertLess(a.help_menu.winfo_rooty(),a.help_btn.winfo_rooty())
+            self.assertLessEqual(a.help_menu.winfo_rooty()+a.help_menu.winfo_height(),a.help_btn.winfo_rooty()+2)
+            self.assertEqual(a.help_menu.entrycget(0,'label'),a.tr('help_guide'))
+            a.help_menu.unpost()
+
     def test_columns_audit_and_chart_icons(self):
         a=self.a;a.columns();self.pump()
         column=next(w for w in a.winfo_children() if isinstance(w,BrandedToplevel))
