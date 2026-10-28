@@ -19,8 +19,8 @@ ctk.set_default_color_theme("blue")
 PREVIEW_ROWS = 500
 OPS = ["包含", "不包含", "等于", "不等于", "开头是", "结尾是", "大于", "小于", "非空", "为空"]
 APP_NAME = "数据提取工具"
-APP_VERSION = "0.15.3"
-BUILD_DATE = "2026-10-27"
+APP_VERSION = "0.15.4"
+BUILD_DATE = "2026-10-28"
 LEFT_ALIGNED_COLUMNS = {"日志内容", "文本内容", "原始行"}
 
 class App(ExportChoiceMixin, HelpMixin, WorkbenchMixin, BatchImportMixin, ctk.CTk):

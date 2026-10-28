@@ -111,9 +111,9 @@ TEXT["en"].update({"help":"Help","help_guide":"User guide","help_hint":"Follow t
 # Compact sidebar and pre-export choice (not a second export implementation).
 TEXT['zh'].update(supported='支持格式：Excel / CSV / TXT\nLOG / TRC',
     batch_imported='已导入 {n} 个文件\nExcel 仅读取首个工作表',
-    export_choose='选择导出格式', export_cancel='取消',
+    export_choose='选择导出格式', export_choose_hint='结果将完整回读校验后保存', export_cancel='取消',
     export_hint_excel='Excel 文本保真', export_hint_csv='逗号分隔', export_hint_txt='制表符分隔')
 TEXT['en'].update(supported='Formats: Excel / CSV / TXT\nLOG / TRC',
     batch_imported='Merged {n} files\nExcel: first worksheet only',
-    export_choose='Choose export format', export_cancel='Cancel',
+    export_choose='Choose export format', export_choose_hint='Saved only after full read-back verification', export_cancel='Cancel',
     export_hint_excel='Excel text fidelity', export_hint_csv='Comma-separated', export_hint_txt='Tab-separated')

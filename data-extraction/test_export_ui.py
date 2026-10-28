@@ -33,9 +33,17 @@ class ExportChoiceTests(unittest.TestCase):
             self.assertEqual(w.title(),a.tr('export_choose'))
             self.assertEqual(len(a.export_format_buttons),3)
             for fmt,ext in (('Excel','.xlsx'),('CSV','.csv'),('TXT','.txt')):
-                self.assertEqual(a.export_format_buttons[fmt].cget('text'),f'{fmt} ({ext})')
-                self.assertEqual(a.export_format_descriptions[fmt].cget('text'),a.tr('export_hint_'+fmt.lower()))
+                button=a.export_format_buttons[fmt]
+                self.assertIn(f'{fmt} ({ext})',button.cget('text'))
+                self.assertEqual(button.cget('anchor'),'center')
+                self.assertIn(a.tr('export_hint_'+fmt.lower()),button.cget('text'))
+                self.assertEqual(a.export_format_descriptions[fmt],a.tr('export_hint_'+fmt.lower()))
             self.assertEqual(sum(isinstance(c,BrandedToplevel) for c in a.winfo_children()),1)
+            self.assertEqual((w.winfo_width(),w.winfo_height()),(440,270))
+            self.assertEqual(w.resizable(),(0,0))
+            self.assertEqual(a.export_format_heading.grid_info()['sticky'],'w')
+            self.assertEqual(a.export_format_hint.grid_info()['sticky'],'w')
+            self.assertEqual(a.export_format_cancel.grid_info()['sticky'],'e')
             a.close_export_format(); self.assertIsNone(a.grab_current())
     def test_all_formats_real_write_and_metadata(self):
         a=self.a
@@ -132,5 +140,17 @@ class ExportChoiceTests(unittest.TestCase):
         pd.testing.assert_frame_equal(a.result,result)
         self.assertIsNone(a.export_format_window); self.assertIsNone(a.grab_current())
         self.assertEqual(a.verification_label.cget('text'),a.tr('wb_not_exported'))
+
+    def test_internal_canvas_hover_has_no_callback_error(self):
+        a=self.a; errors=[]
+        a.report_callback_exception=lambda t,e,b: errors.append(str(e))
+        self.open()
+        for button in a.export_format_buttons.values():
+            for event in ('<Enter>','<Leave>'):
+                button._canvas.event_generate(event); a.update()
+                self.assertEqual(button.cget('anchor'),'center')
+        self.assertEqual(errors,[])
+        self.assertEqual(len(a.result),2)
+        self.assertEqual(len(a.audit.exports),0)
 
 if __name__=='__main__': unittest.main()
